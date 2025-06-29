@@ -49,7 +49,7 @@ const login = async () => {
         router.push({ name: 'Register' });
       } else if (res.data.data.username === u.username && res.data.data.password === u.password && res.data.data.role === "USER"&& res.data.data.status !="SUSPENDED") {
         ElMessage.success('登录成功');
-        router.push({ name: 'Register' });
+        router.push({path: '/user/homepage'});
       } else {
         alert('登录失败，角色不符合！');
       }
