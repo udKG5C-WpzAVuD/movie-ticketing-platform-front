@@ -44,6 +44,7 @@ const routes = [
         redirect: '/login',  // 重定向
         component: AdminLayout,
         children: [
+            {path: '/admin/homepage', component: AdminLayout},
             {path: '/admin/list', component: UserList},
             // 其他admin相关路由
             {path:'/admin/movie',component:Moviecommand },

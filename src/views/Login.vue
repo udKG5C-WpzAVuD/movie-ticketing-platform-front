@@ -46,7 +46,7 @@ const login = async () => {
     if (res.data && res.data.data) {
       if (res.data.data.username === u.username && res.data.data.password === u.password && res.data.data.role === "ADMIN" && res.data.data.status !="SUSPENDED") {
         ElMessage.success('登录成功');
-        router.push({ name: 'Register' });
+        router.push({ path: '/admin/homepage' });
       } else if (res.data.data.username === u.username && res.data.data.password === u.password && res.data.data.role === "USER"&& res.data.data.status !="SUSPENDED") {
         ElMessage.success('登录成功');
         router.push({path: '/user/homepage'});
