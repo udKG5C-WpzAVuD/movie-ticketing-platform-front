@@ -4,6 +4,8 @@ import Layout from "@/views/Layout.vue";
 import UserInfo from "@/views/user/UserInfo.vue";
 import UserList from "@/views/user/UserList.vue";
 import RestPassword from "@/views/user/RestPassword.vue";
+import Register from "@/views/Register.vue";
+import ForgotPassword from "@/views/ForgotPassword.vue";
 
 
 
@@ -20,6 +22,16 @@ const routes = [
       {path: '/user/info', component: UserInfo},
       {path: '/user/resetPassword', component: RestPassword},
     ]
+  },
+  {
+    path: '/register',
+    name: 'Register',
+    component: Register, // 注册组件
+  },
+  {
+    path: '/forgotPassword',
+    name: 'ForgotPassword',
+    component: ForgotPassword, // 注册组件
   },
 ]
 
