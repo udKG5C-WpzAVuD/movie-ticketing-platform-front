@@ -1,9 +1,9 @@
 import {createRouter, createWebHistory} from "vue-router";
 import Login from "@/views/Login.vue";
 import Layout from "@/views/Layout.vue";
-import UserInfo from "@/views/user/UserInfo.vue";
-import UserList from "@/views/user/UserList.vue";
-import RestPassword from "@/views/user/RestPassword.vue";
+// import UserInfo from "@/views/user/UserInfo.vue";
+// import UserList from "@/views/user/UserList.vue";
+// import RestPassword from "@/views/user/RestPassword.vue";
 import UserLayout from "@/views/UserLayout.vue";
 import UserInfo from "@/views/admin/UserInfo.vue";
 import UserList from "@/views/admin/UserList.vue";
