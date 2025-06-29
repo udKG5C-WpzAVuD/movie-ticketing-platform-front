@@ -1,7 +1,7 @@
 <script setup>
 import {getUserById, updateUser, userPageList} from "@/api/user";
 import {reactive, ref} from "vue";
-import {ElMessage} from "element-plus";
+import {ElMessage, ElMessageBox} from "element-plus";
 import {Plus} from "@element-plus/icons-vue";
 
 //查询相关
@@ -10,22 +10,85 @@ const query = ref({
   pageSize:10,
   username:'',
   role:'',
+  status:'',
   total:0
 })
 
 const users = ref([])
+// 添加一个ref来存储当前选择的值
+const selectedFilter = ref('')
 
-// 角色选项
-const roleOptions = [
+// 多级选择器选项
+const filterOptions = [
   {
-    value: 'USER',
-    label: '普通用户'
+    value: 'role',
+    label: '用户角色',
+    children: [
+      {
+        value: 'USER',
+        label: '普通用户'
+      },
+      {
+        value: 'ADMIN',
+        label: '管理员'
+      }
+    ]
   },
   {
-    value: 'ADMIN',
-    label: '管理员'
+    value: 'status',
+    label: '用户状态',
+    children: [
+      {
+        value: 'ACTIVE',
+        label: '活跃'
+      },
+      {
+        value: 'INACTIVE',
+        label: '不活跃'
+      },
+      {
+        value: 'SUSPENDED',
+        label: '已禁用'
+      }
+    ]
   }
 ]
+
+// 修改信息的角色选项
+const roleOptions = ref([
+  { value: 'USER', label: '普通用户' },
+  { value: 'ADMIN', label: '管理员' }
+])
+
+// 多级选择器配置
+const cascaderProps = {
+  expandTrigger: 'hover',
+  checkStrictly: true, // 可以选择任意一级
+  emitPath: false // 只返回最后一级的值
+}
+
+// 处理多级选择器变化
+const handleFilterChange = (value) => {
+  selectedFilter.value = value
+  // 根据选择的类型重置另一个字段
+  if (['USER', 'ADMIN'].includes(value)) {
+    query.value.role = value
+    query.value.status = ''
+  } else if (['ACTIVE', 'INACTIVE', 'SUSPENDED'].includes(value)) {
+    query.value.status = value
+    query.value.role = ''
+  } else {
+    // 清除选择时
+    query.value.role = ''
+    query.value.status = ''
+  }
+}
+
+// 获取当前显示的筛选值（用于回显）
+const getDisplayValue = () => {
+  return query.value.role || query.value.status || []
+}
+
 
 //获取用户列表
 const getUserList =()=>{
@@ -81,8 +144,41 @@ const onSubmit = async () => {
     // 所有错误已被拦截器处理过，这里只需补充操作
     console.error('操作失败:', err);
   }
-};
+}
+// 清除筛选条件
+const clearFilters = () => {
+  selectedFilter.value = ''
+  query.value.role = ''
+  query.value.status = ''
+}
+// 用户禁用与启用
+const toggleUserStatus = (user) => {
+  const newStatus = user.status === 'SUSPENDED' ? 'ACTIVE' : 'SUSPENDED'
+  const actionName = newStatus === 'ACTIVE' ? '启用' : '禁用'
 
+  ElMessageBox.confirm(
+      `您确定要${actionName}该用户吗？${actionName === '禁用' ? '该用户被禁用后无法登录。' : ''}`,
+      `确认${actionName}用户`,
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning',
+      }
+  ).then(async () => {
+    try {
+      await updateUser({
+        id: user.id,
+        status: newStatus
+      })
+      ElMessage.success(`用户已${actionName}`)
+      getUserList() // 刷新列表
+    } catch (error) {
+      console.error(`${actionName}用户失败:`, error)
+    }
+  }).catch(() => {
+    ElMessage.info(`已取消${actionName}操作`)
+  })
+}
 
 </script>
 
@@ -98,36 +194,39 @@ const onSubmit = async () => {
         <el-form-item label="用户名">
           <el-input v-model="query.username" placeholder="请输入用户名" clearable />
         </el-form-item>
-        <el-form-item label="用户角色">
-          <el-select
-              v-model="query.role"
+        <el-form-item label="用户筛选">
+          <el-cascader
+              v-model="selectedFilter"
+              :options="filterOptions"
+              :props="cascaderProps"
+              placeholder="请选择筛选条件"
               clearable
-              placeholder="请选择角色"
-              style="width: 240px"
-          >
-            <el-option
-                v-for="item in roleOptions"
-                :key="item.value"
-                :label="item.label"
-                :value="item.value"
-            />
-          </el-select>
+              @change="handleFilterChange"
+          />
         </el-form-item>
         <el-form-item>
           <el-button type="primary" @click="getUserList">查询</el-button>
         </el-form-item>
       </el-form>
       <el-table :data="users" style="width: 100%">
-        <el-table-column prop="id" label="ID" width="100"/>
-        <el-table-column prop="username" label="用户名"  />
+        <el-table-column prop="id" label="ID" width="80"/>
+        <el-table-column prop="username" label="用户名"  width="80"/>
         <el-table-column prop="email" label="邮箱"  />
         <el-table-column prop="contactPhone" label="电话" />
-        <el-table-column prop="role" label="角色" />
+        <el-table-column prop="role" label="角色" width="80"/>
         <el-table-column prop="registrationTime" label="注册时间" />
-        <el-table-column label="操作" >
+        <el-table-column prop="lastLoginTime" label="最后登录时间" />
+        <el-table-column prop="status" label="状态" width="80"/>
+        <el-table-column label="操作" width="220">
           <template #default="scope">
             <el-button type="primary" @click="modifyUserInfo(scope.row.id)">
               修改信息
+            </el-button>
+            <el-button
+                :type="scope.row.status === 'SUSPENDED' ? 'success' : 'danger'"
+                @click="toggleUserStatus(scope.row)"
+            >
+              {{ scope.row.status === 'SUSPENDED' ? '启用' : '禁用' }}
             </el-button>
           </template>
         </el-table-column>

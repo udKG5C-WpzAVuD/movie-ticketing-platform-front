@@ -9,5 +9,4 @@ export const userPageList = (query) => request.get('/api/user/pageList', {params
 export const getUserById = (id) => request.get(`/api/user/${id}`)
 
 // 更新用户信息
-// 不需要修改，保持原样
 export const updateUser = (data) => request.post('/api/user/update', data)
