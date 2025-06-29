@@ -1,6 +1,8 @@
 import request from "@/utils/request";
 
-export const userInfoService = () => request.get('/api/auth/userInfo')
+export const userInfoService = () => request.get('/api/auth/getInfo')
+
+export const login = (user) => request.post('/api/user/login', user)
 
 //分页列表查询user
 export const userPageList = (query) => request.get('/api/user/pageList', {params: query})
