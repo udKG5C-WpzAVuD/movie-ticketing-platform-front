@@ -1,5 +1,7 @@
 import {createRouter, createWebHistory} from "vue-router";
 import Login from "@/views/Login.vue";
+import Register from "@/views/Register.vue";
+import ForgotPassword from "@/views/ForgotPassword.vue";
 import UserLayout from "@/views/user/layout/UserLayout.vue";
 import Settings from "@/views/user/Settings.vue";
 import ResetPassword from "@/views/user/ResetPassword.vue";
@@ -31,6 +33,16 @@ const routes = [
       {path: '/user/settings', component: Settings},
       {path: '/user/resetPassword', component: ResetPassword}
     ]
+  },
+  {
+    path: '/register',
+    name: 'Register',
+    component: Register, // 注册组件
+  },
+  {
+    path: '/forgotPassword',
+    name: 'ForgotPassword',
+    component: ForgotPassword, // 注册组件
   },
   {
     path: '/',
