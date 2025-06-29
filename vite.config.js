@@ -21,12 +21,11 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: path => path.replace(/^\/api/,'/api')
       },
-    //   加图片的配置
-      '/admin/image': {
+      '/image': {
         target: 'http://localhost:8080',
         changeOrigin: true,
-        rewrite: path => path.replace(/^\/admin\/image/, '/image')
-      }
+        rewrite: path => path.replace(/^\/image/,'/image')
+      },
     }
   }
 })
