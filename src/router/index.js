@@ -1,9 +1,15 @@
 import {createRouter, createWebHistory} from "vue-router";
 import Login from "@/views/Login.vue";
-import Layout from "@/views/Layout.vue";
-import UserInfo from "@/views/user/UserInfo.vue";
-import UserList from "@/views/user/UserList.vue";
-import RestPassword from "@/views/user/RestPassword.vue";
+import UserLayout from "@/views/user/layout/UserLayout.vue";
+import Settings from "@/views/user/Settings.vue";
+import ResetPassword from "@/views/user/ResetPassword.vue";
+import Homepage from "@/views/user/homepage/Homepage.vue";
+import MovieInfo from "@/views/user/homepage/MovieInfo.vue";
+import AdminLayout from "@/views/admin/AdminLayout.vue";
+import MovieList from "@/views/user/homepage/MovieList.vue";
+import Order from "@/views/user/homepage/Order.vue";
+import UserComment from "@/views/user/homepage/UserComment.vue";
+
 
 
 
@@ -13,14 +19,27 @@ const routes = [
   {
     path: '/',
     redirect: '/login',  // 重定向
-    component: Layout,
+    component: UserLayout,
     // 子路由
     children: [
-      {path: '/user/list', component: UserList},
-      {path: '/user/info', component: UserInfo},
-      {path: '/user/resetPassword', component: RestPassword},
+      {path: '/user/resetPassword', component: ResetPassword},
+      {path: '/user/homepage', component: Homepage},
+      {path: '/user/movieInfo', component: MovieInfo},
+      {path: '/user/movieList', component: MovieList},
+      {path: '/user/orders', component: Order},
+      {path: '/user/userComments', component: UserComment},
+      {path: '/user/settings', component: Settings},
+      {path: '/user/resetPassword', component: ResetPassword}
     ]
   },
+  {
+    path: '/',
+    redirect: '/login',  // 重定向
+    component: AdminLayout,
+    children: [
+      // 其他admin相关路由
+    ]
+  }
 ]
 
 // 创建路由器
