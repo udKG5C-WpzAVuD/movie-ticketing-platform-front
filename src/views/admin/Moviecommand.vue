@@ -464,21 +464,42 @@ const disablePastDates = (time) => {
 
 // 多选框选项
 const genreOptions = ref([
+  { value: '剧情', label: '剧情' },
+  { value: '科幻', label: '科幻' },
+  { value: '爱情', label: '爱情' },
   { value: '动作', label: '动作' },
   { value: '喜剧', label: '喜剧' },
-  { value: '爱情', label: '爱情' },
-  { value: '科幻', label: '科幻' },
   { value: '恐怖', label: '恐怖' },
-  { value: '悬疑', label: '悬疑' }
-])
+  { value: '悬疑', label: '悬疑' },
+  { value: '犯罪', label: '犯罪' },
+  { value: '冒险', label: '冒险' },
+  { value: '战争', label: '战争' },
+  { value: '历史', label: '历史' },
+  { value: '武侠', label: '武侠' },
+  { value: '传记', label: '传记' },
+  { value: '古装', label: '古装' },
+  { value: '同性', label: '同性' },
+  { value: '灾难', label: '灾难' },
+  { value: '动画', label: '动画' },
+  { value: '奇幻', label: '奇幻' },
+  { value: '音乐', label: '音乐' },
+  { value: '其他', label: '其他' }
+]);
 
 const languageOptions = ref([
-  { value: '中文', label: '中文' },
+  { value: '中文普通话', label: '中文普通话' },
+  { value: '粤语', label: '粤语' },
   { value: '英语', label: '英语' },
   { value: '日语', label: '日语' },
-  { value: '韩语', label: '韩语' },
-  { value: '法语', label: '法语' }
-])
+  { value: '意大利语', label: '意大利语' },
+  { value: '德语', label: '德语' },
+  { value: '法语', label: '法语' },
+  { value: '西班牙语', label: '西班牙语' },
+  { value: '俄语', label: '俄语' },
+  { value: '印度语', label: '印度语' },
+  { value: '马来语', label: '马来语' },
+  { value: '其他', label: '其他' }
+]);
 
 
 const rules = {

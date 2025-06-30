@@ -19,10 +19,15 @@ import {ElMessage, ElMessageBox} from "element-plus";
 const userInfoStore = useUserInfoStore();
 const getUserInfo = ()=>{
   userInfoService ().then(res=>{
-    if (res.data.username === '模拟用户') {
-      router.push('/login');
-    } else {
-      userInfoStore.setUserInfo(res.data);
+    if(res.data){
+      //登录过
+      userInfoStore.setUserInfo(res.data)
+    }else{
+      ElMessage({
+        message: '尚未登录，请先登录',
+        type: 'warning'
+      })
+      router.push({path: "/login"})
     }
   })
 }
@@ -48,7 +53,7 @@ const handleCommand = (command) => {
         }
     )
   } else {
-    router.push('/user/' + command)
+    router.push('/admin/' + command)
   }
 }
 </script>
@@ -60,32 +65,26 @@ const handleCommand = (command) => {
       <div class="el-aside__logo"></div>
       <el-menu active-text-color="#ffd04b" background-color="#232323" text-color="#fff"
                router>
-        <el-menu-item index="/user/list">
+        <el-menu-item index="/admin/list">
           <el-icon>
             <Promotion/>
           </el-icon>
           <span>用户管理</span>
         </el-menu-item>
-        <el-sub-menu>
-          <template #title>
-            <el-icon>
-              <UserFilled/>
-            </el-icon>
-            <span>个人中心</span>
-          </template>
-          <el-menu-item index="/user/info">
-            <el-icon>
-              <User/>
-            </el-icon>
-            <span>基本资料</span>
-          </el-menu-item>
-          <el-menu-item index="/user/resetPassword">
-            <el-icon>
-              <EditPen/>
-            </el-icon>
-            <span>重置密码</span>
-          </el-menu-item>
-        </el-sub-menu>
+        <!--        添加电影管理界面-->
+        <el-menu-item index="/admin/movie">
+          <el-icon>
+            <Promotion/>
+          </el-icon>
+          <span>电影管理</span>
+        </el-menu-item>
+        <el-menu-item index="/admin/screening">
+          <el-icon>
+            <Promotion/>
+          </el-icon>
+          <span>电影排片管理</span>
+        </el-menu-item>
+        <!--        结束-->
       </el-menu>
     </el-aside>
     <!-- 右侧主区域 -->
@@ -102,7 +101,7 @@ const handleCommand = (command) => {
                     </span>
           <template #dropdown>
             <el-dropdown-menu>
-              <el-dropdown-item command="info" :icon="User">基本资料</el-dropdown-item>
+              <el-dropdown-item command="settings" :icon="User">基本资料</el-dropdown-item>
               <el-dropdown-item command="resetPassword" :icon="EditPen">重置密码</el-dropdown-item>
               <el-dropdown-item command="logout" :icon="SwitchButton">退出登录</el-dropdown-item>
             </el-dropdown-menu>

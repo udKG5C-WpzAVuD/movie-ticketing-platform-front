@@ -32,13 +32,13 @@ const goToMovieInfo = (value) => {
 // 类型筛选
 const handleTypeSelect = (value) => {
   selectType.value = value;
-  updateSelectedMovies();
+  updateSelectedMovies(state.value);
 };
 
 // 语言筛选
 const handleLanguageSelect = (value) => {
   selectLanguage.value = value;
-  updateSelectedMovies();
+  updateSelectedMovies(state.value);
 };
 
 // 统一更新 selectedMovies 的方法（结合类型、语言和搜索关键词）
@@ -101,6 +101,7 @@ const handleCancel = () => {
   state.value = ""; // 清空输入框
   updateSelectedMovies(); // 重置搜索结果
 };
+
 </script>
 
 <template>
