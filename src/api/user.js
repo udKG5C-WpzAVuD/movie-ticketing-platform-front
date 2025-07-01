@@ -28,3 +28,4 @@ export const addsessions = (data) => {
 export const getSessions=()=>request.get('/api/sessions/getSessions')
 export const deletescreen=(screen)=>request.post('/api/sessions/deletescreen',screen)
 export const addLogs=(movie_logs)=>request.post('/api/adminMovieOperationLogs/addLogs',movie_logs)
+export const getSeats=(sessionId)=>request.get('/api/seats/getseats',{params:{sessionId}})

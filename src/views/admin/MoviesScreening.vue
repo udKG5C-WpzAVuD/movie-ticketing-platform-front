@@ -62,12 +62,15 @@ import { ref, computed, onMounted } from 'vue'
 import dayjs from 'dayjs'
 import {addLogs, deletescreen, getSessions} from "@/api/user";
 import {ElMessage, ElMessageBox} from 'element-plus'
+import {useUserInfoStore} from "@/stores/userInfo";
 const movie_logs=ref({
   title:"",
   operationType:"",
   operationTargetId:1,//设定为1  以后会改
   operationTargetType:"电影"
 })
+const userInfoStore = useUserInfoStore();
+const uid = userInfoStore.userInfo?.id;
 const deleteVisible=ref(false)
 const sessionscreen=ref({
   time:'',
@@ -93,6 +96,7 @@ const deleteMovies=()=>{
     })
 
     movie_logs.value.operationType="删除此电影排期"
+    movie_logs.value.operationTargetId=uid
     console.log("日志输出",movie_logs.value)
     // 以后写一个关于操作员id
     addLogs(movie_logs.value).then(res=>{

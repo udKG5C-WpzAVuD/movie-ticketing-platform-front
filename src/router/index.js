@@ -35,7 +35,13 @@ const routes = [
       {path: '/user/orders', component: Order},
       {path: '/user/userComments', component: UserComment},
       {path: '/user/settings', component: Settings},
-      {path: '/user/resetPassword', component: ResetPassword}
+      {path: '/user/resetPassword', component: ResetPassword},
+        {
+            path: '/film/ticket',
+            name: 'FilmTicket',
+            component: () => import('@/views/user/homepage/FilmTicket.vue'), // 动态导入
+            props: (route) => ({ fid: route.query.fid }) // 将查询参数转为props
+        }
     ]
   },
     {
@@ -61,7 +67,8 @@ const routes = [
     path: '/forgotPassword',
     name: 'ForgotPassword',
     component: ForgotPassword, // 注册组件
-  }
+  },
+
 ]
 const router = createRouter({
     history: createWebHistory(), // 路由模式
