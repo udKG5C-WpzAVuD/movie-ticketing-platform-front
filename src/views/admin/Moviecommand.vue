@@ -6,15 +6,18 @@ import {addLogs, addMovie, addsessions, getSessions, moviePageList, updateMovie}
 import {computed, onMounted, ref} from "vue";
 import {Delete, Edit, Plus, Search, Share, Upload} from '@element-plus/icons-vue'
 import {ElMessage} from "element-plus";
+import {useUserInfoStore} from "@/stores/userInfo";
 const dialogVisible =ref(false)//添加弹窗
 const deleteVisible=ref(false)//删除弹窗
 const timeVisible=ref(false)//上架选择时间弹窗
 const editVisible=ref(false)//编辑弹窗
 // 展示数据
+const userInfoStore = useUserInfoStore();
+const uid = userInfoStore.userInfo?.id;
 const movie_logs=ref({
   title:"",
   operationType:"",
-  operationTargetId:1,//设定为1  以后会改
+  operationTargetId:"",//设定为1  以后会改
   operationTargetType:"电影"
 })
 const timeOptions = ref([])
@@ -46,7 +49,7 @@ const putmovievictim=()=>{
     tingnum:'',
     sid:''
   }
-   imageUrl:''
+  imageUrl:''
 }
 const query=ref({
   pageNum:1,
@@ -56,6 +59,7 @@ const query=ref({
    total:0
 })
 const changedialogVisible=()=>{
+  putmovievictim()
   dialogVisible.value=true
 }
 const movies=ref([])//movies必须为一个数组形式
@@ -140,15 +144,17 @@ const saveMovie=()=>{
         message: '电影添加成功',
         type: 'success',
       })
-      putmovievictim()
+
       console.log(res.data)
       dialogVisible.value=false
+      putmovievictim()
       movie_logs.value.title=submitData.title
       movie_logs.value.operationType="添加电影"
+      movie_logs.value.operationTargetId=uid
       console.log("日志输出",movie_logs.value)
       // 以后写一个关于操作员id
       addLogs(movie_logs.value).then(res=>{
-
+        putmovievictim()
       })
       getMovieList()
     }else{
@@ -220,6 +226,7 @@ const editMovies=()=>{
     editdialogVisible()
     movie_logs.value.title=submitData.title
     movie_logs.value.operationType="修改电影"
+    movie_logs.value.operationTargetId=uid
     // 以后写一个关于操作员id
     console.log("日志输出",movie_logs.value)
     addLogs(movie_logs.value).then(res=>{
@@ -260,6 +267,7 @@ const deleteMovies=()=>{
       getMovieList()
 
       movie_logs.value.operationType="删除电影"
+      movie_logs.value.operationTargetId=uid
       console.log("日志输出",movie_logs.value)
       // 以后写一个关于操作员id
       addLogs(movie_logs.value).then(res=>{
@@ -302,6 +310,7 @@ const putawayMovies=()=>{
       updatetimeVisible()
 
       movie_logs.value.operationType="电影上架"
+      movie_logs.value.operationTargetId=uid
       console.log("日志输出",movie_logs.value)
       putmovievictim()
       // 以后写一个关于操作员id
@@ -373,6 +382,7 @@ const getscreeningMovies=()=>{
       screenVisible.value=false
 
       movie_logs.value.operationType="电影排期"
+      movie_logs.value.operationTargetId=uid
       console.log("日志输出",movie_logs.value)
       // 以后写一个关于操作员id
       addLogs(movie_logs.value).then(res=>{
@@ -435,6 +445,7 @@ const putoutMovie=(row)=>{
 
          movie_logs.value.operationType="下架电影"
          // 以后写一个关于操作员id
+         movie_logs.value.operationTargetId=uid
          addLogs(movie_logs.value).then(res=>{
 
          })
