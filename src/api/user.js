@@ -15,7 +15,7 @@ export const updateUser = (data) => request.post('/api/user/update', data)
 export const addMovie =(movie)=>request.post('/api/movies/savemovie',movie)
 export const moviePageList=(query)=>request.get('/api/movies/moviePageList', {params:query})
 export const updateMovie=(movie)=>request.put('/api/movies/updateMovie',movie)
-// export const addsessions=(sessionhalls)=>request.post('/api/sessions/addsessions',sessionhalls)
+
 export const addsessions = (data) => {
     return fetch('/api/sessions/addsessions', {
         method: 'POST',
@@ -28,3 +28,8 @@ export const addsessions = (data) => {
 export const getSessions=()=>request.get('/api/sessions/getSessions')
 export const deletescreen=(screen)=>request.post('/api/sessions/deletescreen',screen)
 export const addLogs=(movie_logs)=>request.post('/api/adminMovieOperationLogs/addLogs',movie_logs)
+
+// 获取用户数据
+export const getUsers = () => request.get('/api/user/getUsers')
+// 获取用户活跃度数据
+export const getUserActivity = () => request.get('/api/userActivity/getUserActivity')

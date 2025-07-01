@@ -10,6 +10,7 @@ import router from "@/router";
 import {createPinia} from "pinia";
 import {createPersistedState} from "pinia-persistedstate-plugin";
 import locale from 'element-plus/dist/locale/zh-cn'
+import * as echarts from 'echarts'
 
 const app = createApp(App)
 const pinia = createPinia()
@@ -20,4 +21,6 @@ app.use(pinia)
 app.use(router)
 app.use(ElementPlus, {locale})
 app.use(Particles)
+app.config.globalProperties.$echarts = echarts
+
 app.mount('#app')

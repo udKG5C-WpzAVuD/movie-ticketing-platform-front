@@ -15,6 +15,9 @@ import MovieList from "@/views/user/homepage/MovieList.vue";
 import Order from "@/views/user/homepage/Order.vue";
 import UserComment from "@/views/user/homepage/UserComment.vue";
 import AdminHomepage from "@/views/admin/AdminHomepage.vue";
+import UserData from "@/views/admin/data/UserData.vue";
+import MovieData from "@/views/admin/data/MovieData.vue";
+import SaleData from "@/views/admin/data/SaleData.vue";
 
 
 
@@ -45,11 +48,13 @@ const routes = [
         children: [
             {path: '/admin/homepage', component: AdminHomepage},
             {path: '/admin/list', component: UserList},
-            // 其他admin相关路由
             {path:'/admin/movie',component:Moviecommand },
             {path:'/admin/screening',component: MoviesScreening},
             {path: '/admin/settings', component: Settings},
-            {path: '/admin/resetPassword', component: ResetPassword}
+            {path: '/admin/resetPassword', component: ResetPassword},
+            {path: '/admin/userData', component: UserData},
+            {path: '/admin/movieData', component: MovieData},
+            {path: '/admin/saleData', component: SaleData}
         ]
     },
   {
