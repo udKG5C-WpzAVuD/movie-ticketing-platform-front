@@ -2,20 +2,22 @@
 
 import {
   CaretBottom,
-  Crop,
-  EditPen, Goods,
-  Management,
-  Promotion,
-  SwitchButton,
-  User,
-  UserFilled
+  EditPen, GoodsFilled, Histogram,
+  Message, Notification,
+  Promotion, SwitchButton,
+  User, UserFilled
 } from '@element-plus/icons-vue'
 import avatar from '@/assets/default.png'
 import {userInfoService} from "@/api/user";
 import {useUserInfoStore} from "@/stores/userInfo";
 import {useRouter} from "vue-router";
 import {ElMessage, ElMessageBox} from "element-plus";
+import {ref} from "vue";
+import {getUnsolvedComments} from "@/api/homepage";
 
+const toBeSolved = ref(true);
+
+// 获取用户信息
 const userInfoStore = useUserInfoStore();
 const getUserInfo = ()=>{
   userInfoService ().then(res=>{
@@ -32,6 +34,19 @@ const getUserInfo = ()=>{
   })
 }
 getUserInfo()
+
+// 获取未处理留言信息
+const fetchUnsolvedComments = () =>{
+  getUnsolvedComments().then(res =>{
+    const comments = res.data
+    if(comments.length === 0){
+      toBeSolved.value = false
+    }else{
+      toBeSolved.value = true
+    }
+  })
+}
+fetchUnsolvedComments()
 
 const router = useRouter();
 const handleCommand = (command) => {
@@ -84,6 +99,32 @@ const handleCommand = (command) => {
           </el-icon>
           <span>电影排片管理</span>
         </el-menu-item>
+        <el-sub-menu>
+          <template #title>
+            <el-icon>
+              <Histogram/>
+            </el-icon>
+            <span>数据统计</span>
+          </template>
+          <el-menu-item index="/admin/userData">
+            <el-icon>
+              <UserFilled/>
+            </el-icon>
+            <span>用户数据</span>
+          </el-menu-item>
+          <el-menu-item index="/admin/movieData">
+            <el-icon>
+              <Notification/>
+            </el-icon>
+            <span>电影数据</span>
+          </el-menu-item>
+          <el-menu-item index="/admin/saleData">
+            <el-icon>
+              <GoodsFilled/>
+            </el-icon>
+            <span>销售数据</span>
+          </el-menu-item>
+        </el-sub-menu>
         <el-menu-item index="/admin/ordercommand">
           <el-icon>
             <Promotion/>
@@ -96,30 +137,47 @@ const handleCommand = (command) => {
     <!-- 右侧主区域 -->
     <el-container>
       <!-- 头部区域 -->
-      <el-header>
-        <div>欢迎：<strong>{{ userInfoStore.userInfo.username }}</strong></div>
-        <el-dropdown placement="bottom-end" @command="handleCommand">
-                    <span class="el-dropdown__box">
-                        <el-avatar :src="userInfoStore.userInfo.avatar?userInfoStore.userInfo.avatar:avatar"/>
-                        <el-icon>
-                            <CaretBottom/>
-                        </el-icon>
-                    </span>
-          <template #dropdown>
-            <el-dropdown-menu>
-              <el-dropdown-item command="settings" :icon="User">基本资料</el-dropdown-item>
-              <el-dropdown-item command="resetPassword" :icon="EditPen">重置密码</el-dropdown-item>
-              <el-dropdown-item command="logout" :icon="SwitchButton">退出登录</el-dropdown-item>
-            </el-dropdown-menu>
-          </template>
-        </el-dropdown>
+      <el-header style="display: flex; justify-content: space-between; align-items: center;">
+        <!-- 左侧欢迎语 -->
+        <div>欢迎：<strong>{{ userInfoStore.userInfo.username }}</strong>！今天也要努力工作哦！</div>
+
+        <!-- 右侧留言按钮 + 头像下拉菜单 -->
+        <div style="display: flex; align-items: center; gap: 50px;">
+          <a href="/admin/comments" style="text-decoration: none;">
+            <div style="display: inline-block;">
+              <el-badge v-if="toBeSolved" is-dot class="item">
+                <el-button class="message-button" :icon="Message" type="primary" />
+              </el-badge>
+              <el-button
+                  v-else
+                  class="message-button"
+                  :icon="Message"
+                  type="primary"
+              />
+            </div>
+          </a>
+
+          <el-dropdown placement="bottom-end" @command="handleCommand">
+      <span class="el-dropdown__box" style="display: flex; align-items: center; cursor: pointer;">
+        <el-avatar :src="userInfoStore.userInfo.avatarUrl ? userInfoStore.userInfo.avatarUrl : avatar" />
+        <el-icon><CaretBottom /></el-icon>
+      </span>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item command="settings" :icon="User">基本资料</el-dropdown-item>
+                <el-dropdown-item command="resetPassword" :icon="EditPen">重置密码</el-dropdown-item>
+                <el-dropdown-item command="logout" :icon="SwitchButton">退出登录</el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
+        </div>
       </el-header>
       <!-- 中间区域 -->
       <el-main>
         <router-view/>
       </el-main>
       <!-- 底部区域 -->
-      <el-footer>后台管理系统 ©2024 </el-footer>
+      <el-footer>电影购票平台后台管理 ©2025 </el-footer>
     </el-container>
   </el-container>
 </template>

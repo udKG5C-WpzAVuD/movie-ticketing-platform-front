@@ -103,10 +103,11 @@ const handleAvatarSuccess= (response, uploadFile) => {
 }
 
 const beforeAvatarUpload = (rawFile) => {
-  if (rawFile.type !== 'image/jpeg' && rawFile.type !=='image/png') {
-    ElMessage.error('Avatar picture must be JPG format!')
-    return false
-  } else if (rawFile.size / 1024 / 1024 > 2) {
+  // if (rawFile.type !== 'image/jpeg' && rawFile.type !=='image/png') {
+  //   ElMessage.error('Avatar picture must be JPG format!')
+  //   return false
+  // } else
+  if (rawFile.size / 1024 / 1024 > 2) {
     ElMessage.error('Avatar picture size can not exceed 2MB!')
     return false
   }
@@ -693,7 +694,7 @@ onMounted(() => {
       </el-form-item>
 
       <el-form-item label="演员" prop="actors">
-        <el-input v-model="movie.actors" placeholder="请输入主要演员，用逗号分隔"/>
+        <el-input v-model="movie.actors" placeholder="请输入主要演员，用/分隔"/>
       </el-form-item>
 
       <el-form-item label="电影时长(分钟)" prop="duration">
