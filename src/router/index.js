@@ -18,6 +18,10 @@ import AdminHomepage from "@/views/admin/AdminHomepage.vue";
 import OrdersInfo from "@/views/user/homepage/OrdersInfo.vue";
 
 
+import UserData from "@/views/admin/data/UserData.vue";
+import MovieData from "@/views/admin/data/MovieData.vue";
+import SaleData from "@/views/admin/data/SaleData.vue";
+import Comments from "@/views/admin/Comments.vue";
 
 
 // 定义路由关系
@@ -59,11 +63,14 @@ const routes = [
         children: [
             {path: '/admin/homepage', component: AdminHomepage},
             {path: '/admin/list', component: UserList},
-            // 其他admin相关路由
             {path:'/admin/movie',component:Moviecommand },
             {path:'/admin/screening',component: MoviesScreening},
             {path: '/admin/settings', component: Settings},
-            {path: '/admin/resetPassword', component: ResetPassword}
+            {path: '/admin/resetPassword', component: ResetPassword},
+            {path: '/admin/userData', component: UserData},
+            {path: '/admin/movieData', component: MovieData},
+            {path: '/admin/saleData', component: SaleData},
+            {path: '/admin/comments', component: Comments}
         ]
     },
   {
