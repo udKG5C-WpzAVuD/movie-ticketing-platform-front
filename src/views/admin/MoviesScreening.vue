@@ -91,8 +91,9 @@ const deleteMovies=()=>{
   deletescreen(sessionscreen.value).then(res=>{
     console.log("需要删除的数据",sessionscreen.value)
     ElMessage({
-      message: '删除成功',
+      message: `删除成功,注意相应排期 ${sessionscreen.value.sid}`,
       type: 'success',
+      duration:10000
     })
 
     movie_logs.value.operationType="删除此电影排期"

@@ -84,6 +84,12 @@ const handleCommand = (command) => {
           </el-icon>
           <span>电影排片管理</span>
         </el-menu-item>
+        <el-menu-item index="/admin/ordercommand">
+          <el-icon>
+            <Promotion/>
+          </el-icon>
+          <span>订单管理</span>
+        </el-menu-item>
         <!--        结束-->
       </el-menu>
     </el-aside>

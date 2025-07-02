@@ -370,7 +370,6 @@ const getscreeningMovies=()=>{
     movie_logs.value.title=sessionhalls.value.title
     addsessions(sessionhalls.value).then(res=>{
       // 此处写相应内容
-
       console.log("打印输出",res.data)
       ElMessage({
         message:'电影排期成功',
@@ -756,17 +755,12 @@ onMounted(() => {
       </div>
     </template>
   </el-dialog>
-
-<!--  添加删除提示弹窗-->
   <el-dialog   v-model="deleteVisible" title="Tips" width="500">
     <div><p>是否确定要删除（删除操作不可逆）</p></div>
     <el-button @click="updatedeleteVisible">取消</el-button>
     <el-button @click="deleteMovies">确定</el-button>
   </el-dialog>
 
-
-<!--  四个按钮的弹窗-->
-<!--上架弹窗时间选择-->
   <el-dialog   v-model="timeVisible" title="Tips" width="500">
     <div><p>请选择电影上映时间</p></div>
     <el-date-picker

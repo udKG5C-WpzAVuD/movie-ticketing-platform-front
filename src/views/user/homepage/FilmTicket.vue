@@ -1,9 +1,10 @@
 <script setup>
 import {useUserInfoStore} from "@/stores/userInfo";
-import {getSeats, getSessions} from "@/api/user";
+import {getSeats, getSessions, updateSeats} from "@/api/user";
 import {computed, ref} from "vue";
 import { defineStore } from 'pinia'
 import router from "@/router";
+import {ElMessage} from "element-plus";
 const film = JSON.parse(sessionStorage.getItem('selectedMovie'));
 const userInfoStore = useUserInfoStore();
 const sessions = ref([])
@@ -59,7 +60,6 @@ const showseats = (session) => {
     showSeatMap.value = true
     selectedSeats.value = [] // 重置已选座位
   })
-router.push({path:'/'})
 }
 const printSeats = () => {
   console.log("seatsfilm 数据：", seatsfilm.value);
@@ -86,7 +86,20 @@ const selectedSeatObjects = computed(() =>
 
 const confirmSelection=()=>{
 //   这里就是订单生成的接口
-
+//写一个完成选购，将座位全部置为那个占用
+updateSeats(selectedSeatObjects.value).then(res=>{
+  ElMessage({
+    message: '下单成功',
+    type: 'success',
+  })
+//   重新渲染列表
+  showseats(currentSession.value)
+}).catch(error=>{
+  ElMessage({
+    message: '下单失败',
+    type: 'error',
+  })
+})
 }
 </script>
 
@@ -117,7 +130,7 @@ const confirmSelection=()=>{
             :class="{ 'active': currentSession?.sid === session.sid }"
             @click="showseats(session)"
         >
-          <div class="session-time">{{ formatTime(session.time) }}</div>
+          <div class="session-time">{{session.time}}</div>
           <div class="session-hall">{{ session.tingnum }}号厅</div>
           <div class="session-price">¥{{ film.price }}</div>
         </div>

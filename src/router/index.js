@@ -15,6 +15,7 @@ import MovieList from "@/views/user/homepage/MovieList.vue";
 import Order from "@/views/user/homepage/Order.vue";
 import UserComment from "@/views/user/homepage/UserComment.vue";
 import AdminHomepage from "@/views/admin/AdminHomepage.vue";
+import Ordercommand from "@/views/admin/Ordercommand.vue";
 
 
 
@@ -55,7 +56,8 @@ const routes = [
             {path:'/admin/movie',component:Moviecommand },
             {path:'/admin/screening',component: MoviesScreening},
             {path: '/admin/settings', component: Settings},
-            {path: '/admin/resetPassword', component: ResetPassword}
+            {path: '/admin/resetPassword', component: ResetPassword},
+            {path:'/admin/ordercommand',component: Ordercommand}
         ]
     },
   {

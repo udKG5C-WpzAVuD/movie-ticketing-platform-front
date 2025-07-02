@@ -26,6 +26,15 @@ export const addsessions = (data) => {
     }).then(res => res.json())
 }
 export const getSessions=()=>request.get('/api/sessions/getSessions')
-export const deletescreen=(screen)=>request.post('/api/sessions/deletescreen',screen)
+export const deletescreen=(screen)=>request.put('/api/sessions/deletescreen',screen)
 export const addLogs=(movie_logs)=>request.post('/api/adminMovieOperationLogs/addLogs',movie_logs)
 export const getSeats=(sessionId)=>request.get('/api/seats/getseats',{params:{sessionId}})
+export const updateSeats=(seats)=>request.post('/api/seats/updateSeats',seats)
+export const getOrders=(query)=>request.get('/api/orders/getOrders',{params:query})
+export const searchOrders=(params)=>request.get('/api/orders/searchOrders',{params})
+export const fetchOrders=()=>request.get('/api/orders/fetchOrders')
+export const getSessionsByid=(params)=>request.get('/api/sessions/getSessionsByid',{params})
+export const getMoviesid=(params)=>request.get('/api/movies/getMoviesid',{params})
+export const deleteSeats=(seatssession)=>request.put('/api/seats/deleteSeats',seatssession)
+export const refundOrder = (params) => request.put(`/api/orders/refundOrder?id=${params.id}`);
+export const addorderoperation=(operation)=>request.post('/api/orderOperation/addorderoperation',operation)
