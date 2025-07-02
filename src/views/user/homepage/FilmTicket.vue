@@ -59,7 +59,6 @@ const showseats = (session) => {
     showSeatMap.value = true
     selectedSeats.value = [] // 重置已选座位
   })
-router.push({path:'/'})
 }
 const printSeats = () => {
   console.log("seatsfilm 数据：", seatsfilm.value);

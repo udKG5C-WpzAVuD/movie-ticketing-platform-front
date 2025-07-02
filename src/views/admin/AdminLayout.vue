@@ -12,7 +12,12 @@ import {userInfoService} from "@/api/user";
 import {useUserInfoStore} from "@/stores/userInfo";
 import {useRouter} from "vue-router";
 import {ElMessage, ElMessageBox} from "element-plus";
+import {ref} from "vue";
+import {getUnsolvedComments} from "@/api/homepage";
 
+const toBeSolved = ref(true);
+
+// 获取用户信息
 const userInfoStore = useUserInfoStore();
 const getUserInfo = ()=>{
   userInfoService ().then(res=>{
@@ -29,6 +34,19 @@ const getUserInfo = ()=>{
   })
 }
 getUserInfo()
+
+// 获取未处理留言信息
+const fetchUnsolvedComments = () =>{
+  getUnsolvedComments().then(res =>{
+    const comments = res.data
+    if(comments.length === 0){
+      toBeSolved.value = false
+    }else{
+      toBeSolved.value = true
+    }
+  })
+}
+fetchUnsolvedComments()
 
 const router = useRouter();
 const handleCommand = (command) => {
@@ -115,15 +133,23 @@ const handleCommand = (command) => {
       <!-- 头部区域 -->
       <el-header style="display: flex; justify-content: space-between; align-items: center;">
         <!-- 左侧欢迎语 -->
-        <div>欢迎：<strong>{{ userInfoStore.userInfo.username }}</strong></div>
+        <div>欢迎：<strong>{{ userInfoStore.userInfo.username }}</strong>！今天也要努力工作哦！</div>
 
         <!-- 右侧留言按钮 + 头像下拉菜单 -->
         <div style="display: flex; align-items: center; gap: 50px;">
-          <div>
-            <el-badge is-dot class="item">
-              <el-button class="share-button" :icon="Message" type="primary" />
-            </el-badge>
-          </div>
+          <a href="/admin/comments" style="text-decoration: none;">
+            <div style="display: inline-block;">
+              <el-badge v-if="toBeSolved" is-dot class="item">
+                <el-button class="message-button" :icon="Message" type="primary" />
+              </el-badge>
+              <el-button
+                  v-else
+                  class="message-button"
+                  :icon="Message"
+                  type="primary"
+              />
+            </div>
+          </a>
 
           <el-dropdown placement="bottom-end" @command="handleCommand">
       <span class="el-dropdown__box" style="display: flex; align-items: center; cursor: pointer;">

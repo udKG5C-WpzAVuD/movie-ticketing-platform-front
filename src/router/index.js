@@ -18,8 +18,7 @@ import AdminHomepage from "@/views/admin/AdminHomepage.vue";
 import UserData from "@/views/admin/data/UserData.vue";
 import MovieData from "@/views/admin/data/MovieData.vue";
 import SaleData from "@/views/admin/data/SaleData.vue";
-
-
+import Comments from "@/views/admin/Comments.vue";
 
 
 // 定义路由关系
@@ -60,7 +59,8 @@ const routes = [
             {path: '/admin/resetPassword', component: ResetPassword},
             {path: '/admin/userData', component: UserData},
             {path: '/admin/movieData', component: MovieData},
-            {path: '/admin/saleData', component: SaleData}
+            {path: '/admin/saleData', component: SaleData},
+            {path: '/admin/comments', component: Comments}
         ]
     },
   {
