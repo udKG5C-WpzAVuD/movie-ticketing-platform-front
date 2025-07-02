@@ -29,3 +29,8 @@ export const getSessions=()=>request.get('/api/sessions/getSessions')
 export const deletescreen=(screen)=>request.post('/api/sessions/deletescreen',screen)
 export const addLogs=(movie_logs)=>request.post('/api/adminMovieOperationLogs/addLogs',movie_logs)
 export const getSeats=(sessionId)=>request.get('/api/seats/getseats',{params:{sessionId}})
+// 新增：根据ID获取场次详情
+export const getSessionById = (id) => request.get(`/api/sessions/${id}`)
+
+// 新增：取消订单
+export const cancelOrder = (orderNo) => request.post('/api/orders/cancel', { orderNo })

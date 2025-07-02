@@ -15,6 +15,7 @@ import MovieList from "@/views/user/homepage/MovieList.vue";
 import Order from "@/views/user/homepage/Order.vue";
 import UserComment from "@/views/user/homepage/UserComment.vue";
 import AdminHomepage from "@/views/admin/AdminHomepage.vue";
+import OrdersInfo from "@/views/user/homepage/OrdersInfo.vue";
 
 
 
@@ -36,10 +37,17 @@ const routes = [
       {path: '/user/userComments', component: UserComment},
       {path: '/user/settings', component: Settings},
       {path: '/user/resetPassword', component: ResetPassword},
+      {path: '/user/OrdersInfo', component: OrdersInfo},
         {
             path: '/film/ticket',
             name: 'FilmTicket',
             component: () => import('@/views/user/homepage/FilmTicket.vue'), // 动态导入
+            props: (route) => ({ fid: route.query.fid }) // 将查询参数转为props
+        },
+        {
+            path: '/orders/info',
+            name: 'OrdersInfo',
+            component: () => import('@/views/user/homepage/OrdersInfo.vue'), // 动态导入
             props: (route) => ({ fid: route.query.fid }) // 将查询参数转为props
         }
     ]
