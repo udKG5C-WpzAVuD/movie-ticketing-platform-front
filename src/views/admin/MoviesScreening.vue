@@ -60,7 +60,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import dayjs from 'dayjs'
-import {addLogs, deletescreen, getSessions} from "@/api/user";
+import {addLogs, deletescreen, fetchOrders, getSessions} from "@/api/user";
 import {ElMessage, ElMessageBox} from 'element-plus'
 import {useUserInfoStore} from "@/stores/userInfo";
 const movie_logs=ref({
@@ -86,25 +86,50 @@ const handleDelete=(session)=>{
 const updatedeleteVisible=()=>{
   deleteVisible.value=false
 }
+const isAfter30Minutes = (inputTime) => {
+  const targetTime = new Date(inputTime);
+  const currentTime = new Date();
+  const timeDiff = targetTime.getTime() - currentTime.getTime();
+  const thirtyMinutesInMs = 0;
+  return timeDiff > thirtyMinutesInMs;
+};
 const deleteMovies=()=>{
   movie_logs.value.title=sessionscreen.value.title
-  deletescreen(sessionscreen.value).then(res=>{
-    console.log("需要删除的数据",sessionscreen.value)
-    ElMessage({
-      message: `删除成功,注意相应排期 ${sessionscreen.value.sid}`,
-      type: 'success',
-      duration:10000
-    })
+  fetchOrders().then(res=>{
+    const orders=res.data
+    const count =ref(0)
+    for(const order of orders){
+      console.log("看这儿",order)
+      if(order.sessionId===sessionscreen.value.sid&&orders.orderStatus!==0&&orders.orderStatus!==3&&isAfter30Minutes(sessionscreen.value.time)){
+        ElMessage({
+          message: "删除失败,该电影有订单，请先退单相应排期订单",
+          type: 'error',
+          duration:3000
+        })
+        count.value++;
+        return;
+      }
+    }
+    if(count.value===0){
+      deletescreen(sessionscreen.value).then(res=>{
+        console.log("需要删除的数据",sessionscreen.value)
+        ElMessage({
+          message: "删除成功",
+          type: 'success',
+          duration:3000
+        })
+        movie_logs.value.operationType="删除此电影排期"
+        movie_logs.value.operationTargetId=uid
+        console.log("日志输出",movie_logs.value)
+        // 以后写一个关于操作员id
+        addLogs(movie_logs.value).then(res=>{
 
-    movie_logs.value.operationType="删除此电影排期"
-    movie_logs.value.operationTargetId=uid
-    console.log("日志输出",movie_logs.value)
-    // 以后写一个关于操作员id
-    addLogs(movie_logs.value).then(res=>{
-
-    })
-    fetchSessions()
+        })
+        fetchSessions()
+      })
+    }
   })
+
   updatedeleteVisible()
 
 }

@@ -157,7 +157,7 @@ const options = {
     <Particles id="tsparticles" class="login__particles" :options="options" />
 
     <div class="loginPart">
-      <h2>用户登录</h2>
+      <h2>欢迎登录电影购票平台</h2>
       <el-form
           :model="loginForm"
           ref="loginFormRef"

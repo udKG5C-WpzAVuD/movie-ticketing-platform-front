@@ -201,16 +201,23 @@ const goToMovieInfo = (value) => {
 
 .app {
   padding: 50px 120px;
+  overflow: hidden; /* 新增：防止浮动元素导致父容器高度塌陷 */
 }
 
 .as {
   float: right;
+  width: 30%; /* 新增：限制热门榜单宽度为30% */
+  box-sizing: border-box; /* 新增：确保宽度包含内边距 */
 }
 
 .main {
   float: left;
   padding-top: 40px;
+  width: 70%; /* 新增：限制正在热映宽度为70% */
+  box-sizing: border-box; /* 新增：确保宽度包含内边距 */
+  padding-right: 20px; /* 新增：与热门榜单保持间距 */
 }
+
 
 .el-carousel__item h3 {
   color: #475669;

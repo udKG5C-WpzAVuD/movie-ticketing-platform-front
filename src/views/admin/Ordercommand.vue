@@ -1,7 +1,15 @@
 <script setup>
 //别忘了处理删除排期和退单还有删除座位的东西
 import {ref} from "vue";
-import {addorderoperation, deleteSeats, getOrders, refundOrder, searchOrders} from "@/api/user";
+import {
+  addorderoperation,
+  deleteSeats,
+  getOrders,
+  getUserById,
+  refundOrder,
+  searchOrders,
+  searchOrdersBysid
+} from "@/api/user";
 import {Upload} from "@element-plus/icons-vue";
 import {ElMessage} from "element-plus";
 import {useUserInfoStore} from "@/stores/userInfo";
@@ -20,25 +28,44 @@ const query=ref({
   pageNum:1,
   pageSize:10,
   orderNo:'',
-  total:0
+  total:0,
+  sessionId:""
 })
 const order=ref({
   orderNo:"",
-  user_id:"",
+  username:"",
+  userId:"",
   contactPhone:"",
   paymentTransactionId:"",
   totalAmount:"",
   paymentTime:"",
   orderStatus:"",
   sessionId:"",
-  ishave:""
+  ishave:"",
+  Status:""
 })
 const getOrderList=(query)=>{
   console.log("传去的数据",query.value)
   getOrders(query.value).then(res=>{
     console.log("拿到的分页数据,",res.data.records)
     orders.value=res.data.records
+    //字段拼接
+    orders.value.forEach(order=>{
+      getUserById(order.userId).then(res=>{
+        order.username=res.data.username
+      })
+      if(order.orderStatus===0){
+        order.Status="未支付"
+      }else if(order.orderStatus===1){
+        order.Status="已支付"
+      }else if(order.orderStatus===2){
+        order.Status="取消订单"
+      }else if(order.orderStatus===3){
+        order.Status="退款订单"
+      }
+    })
 
+    query.value.total=res.data.total
   })
 }
 const pageNoChange =(value)=>{
@@ -62,12 +89,20 @@ console.log("查询订单编号",searchform)
     console.log(error)
   })
 }
+const searchformsid=ref()
+const handleSearchbysid=(searchformsid)=>{
+  console.log("查看相应场次编号",searchformsid)
+  searchOrdersBysid({sessionId:searchformsid}).then(res=>{
+    console.log("查询订单编号",searchform)
+    orders.value=res.data
+    console.log("查询订单数据",orders.value)
+  })
+}
 const seatssession=ref({
   sessionId:"",
   code:""
 })
 const returnsearch=()=>{
-
   getOrderList(query)
 }
 
@@ -106,6 +141,40 @@ const outOrder=(row)=>{
   })
   }
 }
+const quxiao=(row)=>{
+  deleteVisible.value=true
+  console.log("这一行的输出",row)
+  operation.value.orderId=row.id
+  operation.value.operatorType=1
+  operation.value.operatorId=uid
+  operation.value.operation="取消订单"
+  console.log(operation.value)
+  //写相应的退单过程映射包括从sessionid和code来映射出唯一的seats然后删除
+  seatssession.value.code=row.code
+  seatssession.value.sessionId=row.sessionId
+  console.log(seatssession.value.code)
+  const selectedCodes=seatssession.value.code.split(",")
+  for (const code of selectedCodes) {
+    const ss=ref({
+      sessionId:"",
+      code:""
+    })
+    ss.value.sessionId=seatssession.value.sessionId
+    ss.value.code=code
+    deleteSeats(ss.value).then(res=>{
+      console.log(row.id)
+      refundOrder({id:row.id}).then(res=>{
+        ElMessage({
+          message:'取消订单成功',
+          type:'success'
+        })
+        getOrderList(query)
+//不用退钱
+      })
+
+    })
+  }
+}
 getOrderList(query)
 const orderdes=ref("")
 const updatedeleteVisible=()=>{
@@ -141,25 +210,30 @@ operation.value.operationDesc=orderdes.value
     <el-form-item label="订单表">
       <el-input v-model="searchform" placeholder="请输入订单编号" clearable @keyup.enter="handleSearch"></el-input>
     </el-form-item>
+    <el-form-item label="场次表">
+      <el-input v-model="searchformsid" placeholder="请输入场次编号" clearable @keyup.enter="handleSearchbysid"></el-input>
+    </el-form-item>
     <el-form-item>
-      <el-button type="primary" @click="handleSearch(searchform)">查询</el-button>
+      <el-button type="primary" @click="handleSearch(searchform)">查询订单编号</el-button>
+      <el-button type="primary" @click="handleSearchbysid(searchformsid)">查询场次编号</el-button>
       <el-button type="primary" @click="returnsearch">返回</el-button>
     </el-form-item>
   </el-form>
   <el-table :data="orders" border style="width: 100%">
     <!-- 数据列 -->
     <el-table-column prop="orderNo" label="订单编号" width="180" />
-    <el-table-column prop="userId" label="用户id" width="180" />
+    <el-table-column prop="username" label="用户名" width="180" />
     <el-table-column prop="contactPhone" label="联系电话" width="180"/>
-    <el-table-column prop="paymentTransactionId" label="支付方式" width="180"/>
+    <el-table-column prop="paymentTransactionId" label="支付交易号" width="180"/>
     <el-table-column prop="totalAmount" label="总金额" width="180"/>
     <el-table-column prop="paymentTime" label="支付时间" width="180"/>
-    <el-table-column prop="orderStatus" label="订单状态" />
+    <el-table-column prop="Status" label="订单状态" />
 
     <!-- 操作列（正确插槽用法） -->
     <el-table-column label="操作" width="120">
       <template #default="{ row }">
-        <el-button @click="outOrder(row)" v-if="row.orderStatus !== 3" >退单</el-button>
+        <el-button @click="outOrder(row)" v-if="row.orderStatus ===1" >退单</el-button>
+        <el-button @click="quxiao(row)" v-if="row.orderStatus===2">取消订单</el-button>
       </template>
     </el-table-column>
   </el-table>

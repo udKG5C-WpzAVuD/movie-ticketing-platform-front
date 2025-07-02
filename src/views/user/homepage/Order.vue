@@ -11,6 +11,7 @@ import {
   searchOrders
 } from "@/api/user";
 import router from "@/router";
+import axios from 'axios';
 import {ElMessage} from "element-plus";
 import {useUserInfoStore} from "@/stores/userInfo";
 const userInfoStore = useUserInfoStore();
@@ -74,7 +75,7 @@ const showOrders=()=>{
            if(!isAfter30Minutes(xuqouorder.value.time)){
              refundlist.value.push(xuqouorder.value)
            }else{
-           notpayedlist.value.push(xuqouorder.value)
+             notpayedlist.value.push(xuqouorder.value)
            console.log(xuqouorder.value)}
          }else if(xuqouorder.value.orderStatus==1){
                 if(!isAfter30Minutes(xuqouorder.value.time)){
@@ -98,7 +99,12 @@ const showOrders=()=>{
 showOrders()
 const payout=(row)=>{
   //接支付接口
-
+  router.push({
+    path: '/user/OrdersInfo',
+    query: {
+      orderNo: row.orderNo // 键名改为 orderNo，与后端返回一致
+    }
+  });
 }
 const outOrder=(row)=>{
   //退单接口加seats表改变
