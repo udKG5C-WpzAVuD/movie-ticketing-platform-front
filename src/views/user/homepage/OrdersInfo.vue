@@ -120,7 +120,7 @@ const handleCancelOrder = () => {
         orderDetail.value.orderStatus = 2 // 本地更新状态为已取消
 
         // 可选：刷新订单列表页或跳转到订单列表
-        router.push({path: '/user/homepage'});  // 跳转到订单列表页
+        router.push({path: '/user/orders'});  // 跳转到订单列表页
         // setTimeout(() => {
         //   fetchOrderDetail(orderDetail.value.orderNo) // 刷新当前订单详情
         // }, 1000)
