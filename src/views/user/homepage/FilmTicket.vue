@@ -28,9 +28,12 @@ const currentDate = new Date()
 //currentDate.setHours(0, 0, 0, 0)
 
 // 格式化时间显示
-const formatTime = (datetime) => {
+const formatFullDateTime = (datetime) => {
   const date = new Date(datetime)
   return date.toLocaleString('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
     hour: '2-digit',
     minute: '2-digit',
     hour12: false
@@ -301,7 +304,7 @@ const submitOrder = async () => {
           <div class="preview-item">
             <span class="preview-label">场次：</span>
             <span class="preview-value">
-        {{ currentSession ? `${formatTime(currentSession.time)} ${currentSession.tingnum}号厅` : '' }}
+        {{ currentSession ? `${formatFullDateTime(currentSession.time)} ${currentSession.tingnum}号厅` : '' }}
       </span>
           </div>
           <div class="preview-item">

@@ -44,6 +44,6 @@ export const fetchOrders=()=>request.get('/api/orders/fetchOrders')
 export const getSessionsByid=(params)=>request.get('/api/sessions/getSessionsByid',{params})
 export const getMoviesid=(params)=>request.get('/api/movies/getMoviesid',{params})
 export const deleteSeats=(seatssession)=>request.put('/api/seats/deleteSeats',seatssession)
-export const refundOrder = (params) => request.put(`/api/orders/refundOrder?id=${params.id}`);
+export const refundOrder = (params) => request.post('/api/orders/refund', params);
 export const addorderoperation=(operation)=>request.post('/api/orderOperation/addorderoperation',operation)
 export const searchOrdersBysid=(params)=>request.get('/api/orders/searchOrdersBysid',{params})

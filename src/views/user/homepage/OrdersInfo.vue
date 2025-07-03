@@ -15,7 +15,7 @@ const confirmDialog = ref(false) // 取消订单确认对话框
 const username = useUserInfoStore().userInfo.username
 const isPaying = ref(false)
 const pollTimer = ref(null)  // 轮询定时器
-const pollTimeout = 3 * 60 * 10000  // 轮询超时时间（3分钟，与支付宝默认超时一致）
+const pollTimeout = 15 * 60 * 1000  // 轮询超时时间（1分钟，与支付宝默认超时一致）
 const pollInterval = 3000  // 轮询间隔（3秒一次）
 
 // 2. 初始化数据
@@ -121,9 +121,9 @@ const handleCancelOrder = () => {
 
         // 可选：刷新订单列表页或跳转到订单列表
         router.push({path: '/user/orders'});  // 跳转到订单列表页
-        // setTimeout(() => {
-        //   fetchOrderDetail(orderDetail.value.orderNo) // 刷新当前订单详情
-        // }, 1000)
+        setTimeout(() => {
+           fetchOrderDetail(orderDetail.value.orderNo) // 刷新当前订单详情
+         }, 1000)
       } else {
         ElMessage.error(response.message || '取消订单失败')
       }
@@ -159,31 +159,46 @@ const handlePayment = async () => {
   }
 }
 
-//启动轮询检测订单状态
+// 轮询检测订单状态（核心修改：超时后自动取消）
 const startPollingOrderStatus = () => {
-  // 清除可能存在的旧定时器
   if (pollTimer.value) clearInterval(pollTimer.value);
 
-  const startTime = Date.now();  // 记录轮询开始时间
+  const startTime = Date.now();
+  const userInfoStore = useUserInfoStore(); // 获取用户信息
+  const userId = userInfoStore.userInfo?.id; // 用户ID
 
-  // 定时查询订单状态（每3秒一次）
   pollTimer.value = setInterval(async () => {
-    // 检查是否超时（超过3分钟则停止轮询）
+    // 检查是否超时（超过1分钟）
     if (Date.now() - startTime > pollTimeout) {
       clearInterval(pollTimer.value);
-      ElMessage.warning('支付超时，请检查支付状态');
-      isPaying.value = false;
+      ElMessage.warning('支付超时，自动取消订单');
+      // 调用取消订单接口（核心）
+      await autoCancelOrder();
       return;
     }
 
-    // 查询最新订单状态
+    // 正常轮询：查询订单状态
     await fetchOrderDetail(orderDetail.value.orderNo);
-
-    // 如果状态变为“已支付”，停止轮询并更新UI
     if (orderDetail.value?.orderStatus === 1) {
       clearInterval(pollTimer.value);
       isPaying.value = false;
       ElMessage.success('支付成功！订单状态已更新');
+      if (userId && orderDetail.value.totalAmount) {
+        try {
+          await fetch('/api/userActivity/update-purchase', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({
+              userId: userId.toString(),
+              amount: orderDetail.value.totalAmount.toString()
+            })
+          });
+          console.log('用户活动记录更新成功');
+        } catch (error) {
+          console.error('更新用户活动失败:', error);
+          // 不影响主流程，仅打印错误
+        }
+      }
     }
   }, pollInterval);
 }
@@ -193,6 +208,30 @@ onUnmounted(() => {
     clearInterval(pollTimer.value);
   }
 });
+
+// 新增：自动取消订单函数
+const autoCancelOrder = async () => {
+  if (orderDetail.value?.orderStatus !== 0) return; // 仅处理待支付订单
+
+  try {
+    // 调用取消订单接口（与手动取消共用同一接口）
+    console.log("调用取消接口，订单号：", orderDetail.value.orderNo);
+    const response = await cancelOrder(orderDetail.value.orderNo);
+    console.log("取消接口响应：", response);
+    if (response.status) {
+      ElMessage.success('订单已因超时取消');
+      orderDetail.value.orderStatus = 2; // 本地更新状态
+      // 跳转订单列表，确保列表刷新
+      router.push({ path: '/user/orders' });
+    } else {
+      ElMessage.error('超时取消失败：' + response.message);
+      console.log("接口返回失败：", response.message);
+    }
+  } catch (error) {
+    console.error('自动取消订单失败:', error);
+    ElMessage.error('超时取消订单时发生错误');
+  }
+}
 
 </script>
 
