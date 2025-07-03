@@ -1,20 +1,22 @@
 <script setup lang="ts">
 import {ref, watch, onMounted, onBeforeUnmount} from 'vue'
 import { useTransition } from '@vueuse/core'
-import {ChatLineRound, VideoCameraFilled} from '@element-plus/icons-vue'
+import {DataAnalysis, VideoCameraFilled} from '@element-plus/icons-vue'
 import * as echarts from 'echarts'
 import { ListAllFilm } from '@/api/homepage'
+import { getSessions } from '@/api/user'
 
 const movies = ref([])
 const allMovies = ref(0)
 const totalHeat = ref(0)
 const newMovies = ref(0)
 const outputValue = useTransition(totalHeat, { duration: 1500 })
-const feedBacks = ref(562)
+const sessions = ref([])
+const sessionNo = ref(0)
 const chartRef1 = ref<HTMLDivElement | null>(null) // 电影类型分布（饼图）
 const chartRef2 = ref<HTMLDivElement | null>(null) // 电影语言分布（玫瑰图）
 const chartRef3 = ref<HTMLDivElement | null>(null) // 电影热度排行（柱状图）
-const chartRef4 = ref<HTMLDivElement | null>(null) // 导演电影数量统计（柱状图）
+const chartRef4 = ref<HTMLDivElement | null>(null) // 电影排片场次统计（雷达图）
 
 // 格式化日期为 YYYY-MM-DD
 const formatDate = (date: string | Date) => {
@@ -40,11 +42,15 @@ const getMovies = async () => {
     ).length
     totalHeat.value = movies.value.reduce((sum, movie) => sum + (movie.count || 0), 0)
 
+    const sessionRes = await getSessions()
+    sessions.value = sessionRes.data.filter(session => formatDate(session.time) >= formatDate(new Date()))
+    sessionNo.value = sessions.value.length
+
     // 数据加载完成后初始化图表
     initGenreChart()
     initLanguageChart()
     initHeatChart()
-    initDirectorChart()
+    initSessionChart() // 修改为初始化场次统计图表
   } catch (err) {
     console.error("Failed to fetch movies:", err)
   }
@@ -84,7 +90,7 @@ const initGenreChart = () => {
   window.addEventListener('resize', () => chart.resize())
 }
 
-// 新增：2. 电影语言分布（玫瑰图）
+// 2. 电影语言分布（玫瑰图）
 const initLanguageChart = () => {
   if (!chartRef2.value) return
   const chart = echarts.init(chartRef2.value)
@@ -150,10 +156,10 @@ const initHeatChart = () => {
       formatter: '{b}<br/>热度: {c}'
     },
     grid: {
-      left: '3%',      // 调整左边距
-      right: '4%',     // 调整右边距
-      bottom: '3%',    // 调整下边距
-      containLabel: true // 确保标签显示完整
+      left: '3%',
+      right: '4%',
+      bottom: '3%',
+      containLabel: true
     },
     xAxis: {
       type: 'value',
@@ -165,13 +171,13 @@ const initHeatChart = () => {
       type: 'category',
       data: topMovies.map(movie => movie.title),
       axisLabel: {
-        interval: 0,    // 强制显示所有标签
-        rotate: 0,      // 不旋转
-        width: 150,     // 增加标签宽度
-        overflow: 'truncate', // 超出部分截断
-        ellipsis: '...' // 超出显示省略号
+        interval: 0,
+        rotate: 0,
+        width: 150,
+        overflow: 'truncate',
+        ellipsis: '...'
       },
-      inverse: true     // 热度最高的在最上面
+      inverse: true
     },
     series: [
       {
@@ -180,12 +186,12 @@ const initHeatChart = () => {
         data: topMovies.map(movie => movie.count || 0),
         itemStyle: {
           color: '#409EFF',
-          borderRadius: [0, 4, 4, 0] // 圆角效果
+          borderRadius: [0, 4, 4, 0]
         },
         label: {
           show: true,
           position: 'right',
-          formatter: '{c}' // 在柱子右侧显示具体数值
+          formatter: '{c}'
         }
       }
     ]
@@ -195,37 +201,108 @@ const initHeatChart = () => {
   window.addEventListener('resize', () => chart.resize())
 }
 
-// 4. 导演电影数量统计（柱状图）
-const initDirectorChart = () => {
+// 4. 电影排片场次统计（雷达图）
+const initSessionChart = () => {
   if (!chartRef4.value) return
   const chart = echarts.init(chartRef4.value)
 
-  // 统计每个导演的电影数量（取前 10）
-  const directorMap = new Map<string, number>()
-  movies.value.forEach(movie => {
-    const director = movie.director.trim()
-    directorMap.set(director, (directorMap.get(director) || 0) + 1)
+  // 统计每部电影的场次数量
+  const sessionMap = new Map<string, number>()
+  sessions.value.forEach(session => {
+    const title = session.title || '未知电影'
+    sessionMap.set(title, (sessionMap.get(title) || 0) + 1)
   })
 
-  const topDirectors = Array.from(directorMap.entries())
+  // 转换为数组并排序，取前10部场次最多的电影
+  const sessionData = Array.from(sessionMap.entries())
       .sort((a, b) => b[1] - a[1])
       .slice(0, 10)
 
+  // 计算最大值用于雷达图半径
+  const maxValue = Math.max(...sessionData.map(([, value]) => value), 5) // 最小半径为5
+
   const option = {
-    title: { text: '导演电影数量 (Top 10)', left: 'center' },
-    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
-    xAxis: { type: 'value' },
-    yAxis: {
-      type: 'category',
-      data: topDirectors.map(([name]) => name),
-      axisLabel: { interval: 0, rotate: 0 }
+    title: { text: '电影排片场次统计 (Top 10)', left: 'center' },
+    tooltip: {
+      trigger: 'item',
+      formatter: params => {
+        // params 是数组，取第一个元素
+        const data = params.data
+        let result = params.marker + ' ' + params.name + '<br/>'
+        // 遍历每个指标（电影名称）和对应的值
+        sessionData.forEach(([name, value], index) => {
+          result += `${name}: ${data.value[index]}<br/>`
+        })
+        return result
+      }
+    },
+    legend: {
+      data: ['排片场次'],
+      bottom: 10
+    },
+    radar: {
+      indicator: sessionData.map(([name]) => ({ name, max: maxValue })),
+      radius: '70%',
+      splitNumber: 5,
+      axisName: {
+        color: '#333',
+        fontSize: 12,
+        formatter: function (value) {
+          // 如果名称太长，截断显示
+          return value.length > 8 ? value.substring(0, 8) + '...' : value
+        }
+      },
+      splitArea: {
+        show: true,
+        areaStyle: {
+          color: ['rgba(255, 255, 255, 0.1)']
+        }
+      },
+      axisLine: {
+        lineStyle: {
+          color: 'rgba(0, 0, 0, 0.2)'
+        }
+      },
+      splitLine: {
+        lineStyle: {
+          color: 'rgba(0, 0, 0, 0.2)'
+        }
+      }
     },
     series: [
       {
-        name: '电影数量',
-        type: 'bar',
-        data: topDirectors.map(([, value]) => value),
-        itemStyle: { color: '#67C23A' }
+        name: '排片场次',
+        type: 'radar',
+        symbolSize: 6,
+        data: [
+          {
+            value: sessionData.map(([, value]) => value),
+            name: '排片场次',
+            areaStyle: {
+              color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                { offset: 0, color: 'rgba(64, 158, 255, 0.6)' },
+                { offset: 1, color: 'rgba(64, 158, 255, 0.2)' }
+              ])
+            },
+            lineStyle: {
+              color: '#409EFF',
+              width: 2
+            },
+            itemStyle: {
+              color: '#409EFF',
+              borderColor: '#FFF',
+              borderWidth: 1
+            },
+            label: {
+              show: true,
+              formatter: function (params) {
+                return params.value
+              },
+              color: '#333',
+              fontSize: 10
+            }
+          }
+        ]
       }
     ]
   }
@@ -257,7 +334,7 @@ const cleanupCharts = () => {
 
 onMounted(() => {
   window.addEventListener('resize', handleResize)
-  getMovies() // 在这里调用获取数据
+  getMovies()
 })
 
 onBeforeUnmount(() => {
@@ -303,10 +380,10 @@ onBeforeUnmount(() => {
           </el-badge>
         </el-col>
         <el-col :span="6">
-          <el-statistic title="Feedback number" :value="feedBacks" class="bold-statistic">
+          <el-statistic title="Session number" :value="sessionNo" class="bold-statistic">
             <template #suffix>
               <el-icon style="vertical-align: -0.125em">
-                <ChatLineRound />
+                <DataAnalysis />
               </el-icon>
             </template>
           </el-statistic>
