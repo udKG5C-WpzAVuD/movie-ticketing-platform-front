@@ -132,6 +132,13 @@ const handleCommand = (command) => {
           <span>订单管理</span>
         </el-menu-item>
         <!--        结束-->
+        <!-- 添加文件导出与定期报告 -->
+        <el-menu-item index="/admin/exportData">
+          <el-icon>
+            <Promotion/>
+          </el-icon>
+          <span>数据导出</span>
+        </el-menu-item>
       </el-menu>
     </el-aside>
     <!-- 右侧主区域 -->

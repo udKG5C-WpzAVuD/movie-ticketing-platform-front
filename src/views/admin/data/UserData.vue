@@ -2,6 +2,7 @@
 import { ref, watch, onMounted } from 'vue'
 import { useTransition } from '@vueuse/core'
 import { getUsers, getUserActivity } from "@/api/user";
+import { getAllComments } from "@/api/homepage";
 import { ChatLineRound } from '@element-plus/icons-vue'
 import * as echarts from 'echarts'
 
@@ -11,7 +12,7 @@ const allUsers = ref(0)
 const activeUsers = ref(0)
 const newUsers = ref(0)
 const outputValue = useTransition(activeUsers, { duration: 1500 })
-const feedBacks = ref(562)
+const feedBacks = ref(0)
 const chartRef1 = ref<HTMLDivElement | null>(null) // 新注册用户趋势图
 const chartRef2 = ref<HTMLDivElement | null>(null) // 活跃用户趋势图
 const chartRef3 = ref<HTMLDivElement | null>(null) // 用户消费分布饼图
@@ -377,6 +378,16 @@ const initUsers = () => {
       const { indicators, values } = countUserActivityRadar()
       initPieChart(chartRef3.value, '用户消费金额分布', labels, data)
       initRadarChart(chartRef4.value, '用户平均活跃度分析', indicators, values)
+    })
+
+    const params = {
+      pageNo: 1,
+      pageSize: 5,
+      category: undefined,
+      status: undefined
+    };
+    getAllComments(params).then(res => {
+      feedBacks.value = res.data?.total
     })
   })
 }

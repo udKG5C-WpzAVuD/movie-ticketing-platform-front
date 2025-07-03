@@ -18,6 +18,7 @@ import AdminHomepage from "@/views/admin/AdminHomepage.vue";
 import OrdersInfo from "@/views/user/homepage/OrdersInfo.vue";
 import Ordercommand from "@/views/admin/Ordercommand.vue";
 
+import ExportData from "@/views/admin/ExportData.vue"
 
 import UserData from "@/views/admin/data/UserData.vue";
 import MovieData from "@/views/admin/data/MovieData.vue";
@@ -73,7 +74,14 @@ const routes = [
             {path: '/admin/userData', component: UserData},
             {path: '/admin/movieData', component: MovieData},
             {path: '/admin/saleData', component: SaleData},
-            {path: '/admin/comments', component: Comments}
+            {path: '/admin/comments', component: Comments},
+            {path:'/admin/ordercommand',component: Ordercommand},
+            {path: '/admin/resetPassword', component: ResetPassword},
+            {path: '/admin/userData', component: UserData},
+            {path: '/admin/movieData', component: MovieData},
+            {path: '/admin/saleData', component: SaleData},
+            {path: '/admin/comments', component: Comments},
+            {path:'/admin/exportData',component:ExportData}
         ]
     },
   {
