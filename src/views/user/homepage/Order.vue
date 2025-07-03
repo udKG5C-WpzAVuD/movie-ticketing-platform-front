@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from "vue";
+import { ref, onMounted, onUnmounted } from "vue";
 import {
   deleteSeats,
   fetchOrders,
@@ -17,6 +17,8 @@ import axios from 'axios';
 
 const userInfoStore = useUserInfoStore();
 const uid = userInfoStore.userInfo?.id;
+let refreshTimer = null;
+const isRefreshing = ref(false); // 新增：并发控制标志
 
 // 订单列表数据
 const notpayedlist = ref([]);
@@ -35,8 +37,12 @@ const isAfter30Minutes = (inputTime) => {
   return timeDiff > thirtyMinutesInMs;
 };
 
-// 加载订单列表
+// 加载订单列表（添加去重和并发控制）
 const showOrders = async () => {
+  if (isRefreshing.value) return; // 避免并发刷新
+  isRefreshing.value = true;
+
+  // 清空列表
   notpayedlist.value = [];
   payedlist.value = [];
   refundlist.value = [];
@@ -46,8 +52,17 @@ const showOrders = async () => {
 
   try {
     const res = await fetchOrders();
-    orders.value = res.data.filter(order => order.userId === uid);
 
+    // 关键：基于orderNo去重（确保唯一）
+    const uniqueOrders = Array.from(
+        new Map(res.data.map(order => [order.orderNo, order])).values()
+    );
+
+    // 过滤当前用户订单
+    orders.value = uniqueOrders.filter(order => order.userId === uid);
+    console.log('加载订单成功，共', orders.value.length, '条');
+
+    // 遍历处理订单
     for (const order of orders.value) {
       const orderWithDetails = { ...order };
 
@@ -58,11 +73,13 @@ const showOrders = async () => {
       const movieRes = await getMoviesid({ id: sessionRes.data.movieId });
       orderWithDetails.title = movieRes.data.title;
 
-      // 订单分类
+      // 订单分类（添加日志便于调试）
       if (orderWithDetails.orderStatus === 0) {
         if (!isAfter30Minutes(orderWithDetails.time)) {
+          console.log('添加到refundlist:', orderWithDetails.orderNo);
           refundlist.value.push(orderWithDetails);
         } else {
+          console.log('添加到notpayedlist:', orderWithDetails.orderNo);
           notpayedlist.value.push(orderWithDetails);
         }
       } else if (orderWithDetails.orderStatus === 1) {
@@ -80,6 +97,8 @@ const showOrders = async () => {
   } catch (error) {
     console.error("刷新订单列表失败:", error);
     ElMessage.error("刷新订单失败，请重试");
+  } finally {
+    isRefreshing.value = false;
   }
 };
 
@@ -185,6 +204,42 @@ const formatDateTime = (datetime) => {
     minute: '2-digit'
   });
 };
+
+// 检查订单是否超时（用于定时刷新时判断）
+const checkOrderTimeout = (order) => {
+  if (order.orderStatus !== 0) return false; // 仅检查待支付订单
+  const createTime = new Date(order.createTime);
+  const timeoutTime = new Date(createTime.getTime() + 24 * 60 * 60 * 1000); // 24小时超时
+  return new Date() > timeoutTime; // 当前时间 > 超时时间 → 已超时
+};
+
+// 定时刷新列表（调整间隔并添加并发控制）
+const startAutoRefresh = () => {
+  if (refreshTimer) clearInterval(refreshTimer);
+
+  // 每2分钟检查一次（减少频率）
+  refreshTimer = setInterval(async () => {
+    if (isRefreshing.value) return; // 避免并发刷新
+
+    const hasTimeoutOrder = orders.value.some(order => checkOrderTimeout(order));
+    if (hasTimeoutOrder) {
+      console.log('检测到超时订单，触发刷新');
+      await showOrders();
+    }
+  }, 2 * 60 * 1000); // 2分钟 = 120000毫秒
+};
+
+// 初始化订单列表并启动定时刷新
+onMounted(() => {
+  showOrders().then(() => {
+    startAutoRefresh();
+  });
+});
+
+// 组件卸载时清除定时器
+onUnmounted(() => {
+  if (refreshTimer) clearInterval(refreshTimer);
+});
 </script>
 
 <template>
@@ -208,7 +263,7 @@ const formatDateTime = (datetime) => {
               <h3>{{ order.title }}</h3>
               <p>时间: {{ formatDateTime(order.time) }}</p>
               <p>座位: {{ order.code.split(',').join('、') }}</p>
-              <p>支付方式: {{ order.paymentTransactionId || '未选择' }}</p>
+              <p>支付方式: {{ '支付宝' }}</p>
             </div>
 
             <div class="order-amount">
