@@ -1,4 +1,4 @@
-<script setup></script>
+np<script setup></script>
 
 <template>
   <router-view/>
