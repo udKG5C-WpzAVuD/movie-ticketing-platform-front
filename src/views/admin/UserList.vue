@@ -215,7 +215,6 @@ const toggleUserStatus = (user) => {
         <el-table-column prop="contactPhone" label="电话" />
         <el-table-column prop="role" label="角色" width="80"/>
         <el-table-column prop="registrationTime" label="注册时间" />
-        <el-table-column prop="lastLoginTime" label="最后登录时间" />
         <el-table-column prop="status" label="状态" width="80"/>
         <el-table-column label="操作" width="220">
           <template #default="scope">

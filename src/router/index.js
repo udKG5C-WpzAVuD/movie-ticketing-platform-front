@@ -15,9 +15,15 @@ import MovieList from "@/views/user/homepage/MovieList.vue";
 import Order from "@/views/user/homepage/Order.vue";
 import UserComment from "@/views/user/homepage/UserComment.vue";
 import AdminHomepage from "@/views/admin/AdminHomepage.vue";
+import OrdersInfo from "@/views/user/homepage/OrdersInfo.vue";
 import Ordercommand from "@/views/admin/Ordercommand.vue";
 
+import ExportData from "@/views/admin/ExportData.vue"
 
+import UserData from "@/views/admin/data/UserData.vue";
+import MovieData from "@/views/admin/data/MovieData.vue";
+import SaleData from "@/views/admin/data/SaleData.vue";
+import Comments from "@/views/admin/Comments.vue";
 
 
 // 定义路由关系
@@ -37,10 +43,17 @@ const routes = [
       {path: '/user/userComments', component: UserComment},
       {path: '/user/settings', component: Settings},
       {path: '/user/resetPassword', component: ResetPassword},
+      {path: '/user/OrdersInfo', component: OrdersInfo},
         {
             path: '/film/ticket',
             name: 'FilmTicket',
             component: () => import('@/views/user/homepage/FilmTicket.vue'), // 动态导入
+            props: (route) => ({ fid: route.query.fid }) // 将查询参数转为props
+        },
+        {
+            path: '/orders/info',
+            name: 'OrdersInfo',
+            component: () => import('@/views/user/homepage/OrdersInfo.vue'), // 动态导入
             props: (route) => ({ fid: route.query.fid }) // 将查询参数转为props
         }
     ]
@@ -52,12 +65,17 @@ const routes = [
         children: [
             {path: '/admin/homepage', component: AdminHomepage},
             {path: '/admin/list', component: UserList},
-            // 其他admin相关路由
             {path:'/admin/movie',component:Moviecommand },
             {path:'/admin/screening',component: MoviesScreening},
             {path: '/admin/settings', component: Settings},
             {path: '/admin/resetPassword', component: ResetPassword},
-            {path:'/admin/ordercommand',component: Ordercommand}
+            {path:'/admin/ordercommand',component: Ordercommand},
+            {path: '/admin/resetPassword', component: ResetPassword},
+            {path: '/admin/userData', component: UserData},
+            {path: '/admin/movieData', component: MovieData},
+            {path: '/admin/saleData', component: SaleData},
+            {path: '/admin/comments', component: Comments},
+            {path:'/admin/exportData',component:ExportData}
         ]
     },
   {
