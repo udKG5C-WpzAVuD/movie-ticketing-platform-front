@@ -233,7 +233,7 @@ operation.value.operationDesc=orderdes.value
     <el-table-column label="操作" width="120">
       <template #default="{ row }">
         <el-button @click="outOrder(row)" v-if="row.orderStatus ===1" >退单</el-button>
-        <el-button @click="quxiao(row)" v-if="row.orderStatus===2">取消订单</el-button>
+        <el-button @click="quxiao(row)" v-if="row.orderStatus===0">取消订单</el-button>
       </template>
     </el-table-column>
   </el-table>

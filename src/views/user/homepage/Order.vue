@@ -41,6 +41,13 @@ const isAfter30Minutes = (inputTime) => {
   const thirtyMinutesInMs = 0;
   return timeDiff > thirtyMinutesInMs;
 };
+const isAfterOneDay = (inputTime) => {
+  const targetTime = new Date(inputTime);
+  const currentTime = new Date();
+  const timeDiff =  currentTime.getTime()-targetTime.getTime() ;//当前时间-创建时间
+  const thirtyMinutesInMs = 24*60*60*1000;
+  return timeDiff > thirtyMinutesInMs;
+};
 const showOrders=()=>{
 
   fetchOrders().then(res=>{
@@ -73,12 +80,12 @@ const showOrders=()=>{
             xuqouorder.value.title=res.data.title
          if(xuqouorder.value.orderStatus==0){
            if(!isAfter30Minutes(xuqouorder.value.time)){
-             refundlist.value.push(xuqouorder.value)
+             quxiao.value.push(xuqouorder.value)
            }else{
              notpayedlist.value.push(xuqouorder.value)
            console.log(xuqouorder.value)}
-         }else if(xuqouorder.value.orderStatus==1){
-                if(!isAfter30Minutes(xuqouorder.value.time)){
+         }else if(!xuqouorder.value.orderStatus==1){
+                if(!isAfterOneDay(xuqouorder.value.createTime)){
                   payedlist.value.push(xuqouorder.value)
                 }else{
                   cantuikuan.value.push(xuqouorder.value)

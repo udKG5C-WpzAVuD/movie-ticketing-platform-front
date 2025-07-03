@@ -75,12 +75,6 @@ const routes = [
             {path: '/admin/movieData', component: MovieData},
             {path: '/admin/saleData', component: SaleData},
             {path: '/admin/comments', component: Comments},
-            {path:'/admin/ordercommand',component: Ordercommand},
-            {path: '/admin/resetPassword', component: ResetPassword},
-            {path: '/admin/userData', component: UserData},
-            {path: '/admin/movieData', component: MovieData},
-            {path: '/admin/saleData', component: SaleData},
-            {path: '/admin/comments', component: Comments},
             {path:'/admin/exportData',component:ExportData}
         ]
     },
