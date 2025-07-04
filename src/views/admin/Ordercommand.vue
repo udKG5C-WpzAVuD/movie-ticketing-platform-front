@@ -181,9 +181,6 @@ console.log(row)
     if (refundRes.status) {
       ElMessage.success('退款成功，资金将在1-3个工作日内退回原支付账户');
 
-      // First function's order refresh
-      await showOrders();
-
       // Second function's order list refresh
       await getOrderList(query);
 
