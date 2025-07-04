@@ -6,12 +6,12 @@ import {
   deleteSeats,
   getOrders,
   getUserById,
-  refundOrder,
+  refundOrder, refundOrders,
   searchOrders,
   searchOrdersBysid
 } from "@/api/user";
 import {Upload} from "@element-plus/icons-vue";
-import {ElMessage} from "element-plus";
+import {ElMessage, ElMessageBox} from "element-plus";
 import {useUserInfoStore} from "@/stores/userInfo";
 const userInfoStore = useUserInfoStore();
 const uid = userInfoStore.userInfo?.id;
@@ -106,41 +106,110 @@ const returnsearch=()=>{
   getOrderList(query)
 }
 
-const outOrder=(row)=>{
-  deleteVisible.value=true
-  console.log("这一行的输出",row)
-  operation.value.orderId=row.id
-  operation.value.operatorType=1
-  operation.value.operatorId=uid
-  operation.value.operation="删除订单"
-  console.log(operation.value)
-  //写相应的退单过程映射包括从sessionid和code来映射出唯一的seats然后删除
-   seatssession.value.code=row.code
-  seatssession.value.sessionId=row.sessionId
-  console.log(seatssession.value.code)
-  const selectedCodes=seatssession.value.code.split(",")
-  for (const code of selectedCodes) {
-    const ss=ref({
-      sessionId:"",
-      code:""
-    })
-    ss.value.sessionId=seatssession.value.sessionId
-    ss.value.code=code
-  deleteSeats(ss.value).then(res=>{
-    console.log(row.id)
-    refundOrder({id:row.id}).then(res=>{
-      ElMessage({
-        message:'退单成功',
-        type:'success'
-      })
-      getOrderList(query)
-
-      //订单退款接口   改订单状态  id
-    })
-
-  })
+const outOrder = async (row) => {
+  const userInfoStore = useUserInfoStore();
+  const userId = userInfoStore.userInfo?.id;
+console.log(row)
+  // First function's validation checks
+  if (!row) {
+    ElMessage.error('订单数据不存在');
+    return;
   }
-}
+  if (!row.orderNo) {
+    ElMessage.error('订单编号缺失');
+    return;
+  }
+  if (!row.totalAmount) {
+    ElMessage.error('退款金额缺失');
+    return;
+  }
+
+  try {
+    // First function's confirmation dialog
+    await ElMessageBox.confirm(
+        `确定要退掉订单号为${row.orderNo}的订单吗？`,
+        '退单确认',
+        {
+          confirmButtonText: '确认退单',
+          cancelButtonText: '取消',
+          type: 'warning'
+        }
+    );
+
+    // Second function's delete operation setup
+    deleteVisible.value = true;
+    console.log("这一行的输出", row);
+    operation.value.orderId = row.id;
+    operation.value.operatorType = 1;
+    operation.value.operatorId = uid;
+    operation.value.operation = "删除订单";
+    console.log(operation.value);
+
+    // Second function's seat deletion logic
+    seatssession.value.code = row.code;
+    seatssession.value.sessionId = row.sessionId;
+    console.log(seatssession.value.code);
+    const selectedCodes = seatssession.value.code.split(",");
+
+    // Process seat deletions
+    for (const code of selectedCodes) {
+      const ss = ref({
+        sessionId: "",
+        code: ""
+      });
+      ss.value.sessionId = seatssession.value.sessionId;
+      ss.value.code = code;
+
+      try {
+        await deleteSeats(ss.value);
+      } catch (error) {
+        console.error('删除座位失败:', error);
+        throw error; // Re-throw to be caught by outer try-catch
+      }
+    }
+
+    // First function's refund logic with second function's refund call
+    const refundParams = {
+      orderNo: row.orderNo,
+      refundAmount: row.totalAmount.toString(),
+      refundReason: '用户主动退单',
+      id: row.id // Added from second function
+    };
+
+    const refundRes = await refundOrder(refundParams);
+
+    if (refundRes.status) {
+      ElMessage.success('退款成功，资金将在1-3个工作日内退回原支付账户');
+
+      // Second function's order list refresh
+      await getOrderList(query);
+
+      // First function's user activity update
+      if (userId && row.totalAmount) {
+        try {
+          await fetch('/api/userActivity/update-refund', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({
+              userId: userId.toString(),
+              amount: row.totalAmount.toString()
+            })
+          });
+          console.log('用户活动记录更新成功');
+        } catch (error) {
+          console.error('更新用户活动失败:', error);
+        }
+      }
+    } else {
+      ElMessage.error(`退款失败：${refundRes.message || '未知错误'}`);
+    }
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('退单失败:', error);
+      ElMessage.error(`退单失败：${error.message || '系统错误'}`);
+    }
+  }
+};
 const quxiao=(row)=>{
   deleteVisible.value=true
   console.log("这一行的输出",row)
@@ -163,7 +232,7 @@ const quxiao=(row)=>{
     ss.value.code=code
     deleteSeats(ss.value).then(res=>{
       console.log(row.id)
-      refundOrder({id:row.id}).then(res=>{
+      refundOrders({id:row.id}).then(res=>{
         ElMessage({
           message:'取消订单成功',
           type:'success'
@@ -233,7 +302,7 @@ operation.value.operationDesc=orderdes.value
     <el-table-column label="操作" width="120">
       <template #default="{ row }">
         <el-button @click="outOrder(row)" v-if="row.orderStatus ===1" >退单</el-button>
-        <el-button @click="quxiao(row)" v-if="row.orderStatus===2">取消订单</el-button>
+        <el-button @click="quxiao(row)" v-if="row.orderStatus===0">取消订单</el-button>
       </template>
     </el-table-column>
   </el-table>

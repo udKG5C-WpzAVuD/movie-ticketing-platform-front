@@ -100,7 +100,7 @@ const deleteMovies=()=>{
     const count =ref(0)
     for(const order of orders){
       console.log("看这儿",order)
-      if(order.sessionId===sessionscreen.value.sid&&orders.orderStatus!==0&&orders.orderStatus!==3&&isAfter30Minutes(sessionscreen.value.time)){
+      if(order.sessionId===sessionscreen.value.sid&&orders.orderStatus!==2&&orders.orderStatus!==3&&isAfter30Minutes(sessionscreen.value.time)){
         ElMessage({
           message: "删除失败,该电影有订单，请先退单相应排期订单",
           type: 'error',

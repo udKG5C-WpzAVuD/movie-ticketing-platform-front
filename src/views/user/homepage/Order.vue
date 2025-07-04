@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, onUnmounted } from "vue";
+import { onMounted, onUnmounted, ref } from "vue";
 import {
   deleteSeats,
   fetchOrders,
@@ -28,13 +28,22 @@ const cantuikuan = ref([]);
 const quxiao = ref([]);
 const orders = ref([]);
 
-// 判断是否在开场前30分钟以上（可退款）
+// 判断是否在开场前以上（可退款）
 const isAfter30Minutes = (inputTime) => {
   const targetTime = new Date(inputTime);
   const currentTime = new Date();
   const timeDiff = targetTime.getTime() - currentTime.getTime();
-  const thirtyMinutesInMs = 30 * 60 * 1000;
+  const thirtyMinutesInMs = 30 * 60 * 1000; // 30分钟
   return timeDiff > thirtyMinutesInMs;
+};
+
+// 判断是否超过24小时（超时取消）
+const isAfterOneDay = (inputTime) => {
+  const targetTime = new Date(inputTime);
+  const currentTime = new Date();
+  const timeDiff = currentTime.getTime() - targetTime.getTime();
+  const oneDayInMs = 24 * 60 * 60 * 1000; // 24小时
+  return timeDiff > oneDayInMs;
 };
 
 // 加载订单列表（添加去重和并发控制）
@@ -72,25 +81,36 @@ const showOrders = async () => {
 
       const movieRes = await getMoviesid({ id: sessionRes.data.movieId });
       orderWithDetails.title = movieRes.data.title;
+      console.log("订单详情", orderWithDetails);
 
-      // 订单分类（添加日志便于调试）
+      // 订单分类（修正逻辑嵌套）
       if (orderWithDetails.orderStatus === 0) {
-        if (!isAfter30Minutes(orderWithDetails.time)) {
-          console.log('添加到refundlist:', orderWithDetails.orderNo);
-          refundlist.value.push(orderWithDetails);
-        } else {
-          console.log('添加到notpayedlist:', orderWithDetails.orderNo);
+        // 待支付订单
+        if (isAfter30Minutes(orderWithDetails.time)) {
+          // 未开场，可支付
           notpayedlist.value.push(orderWithDetails);
+        } else {
+          // 已开场，不可支付，判断是否超时24小时
+          if (isAfterOneDay(orderWithDetails.createTime)) {
+            quxiao.value.push(orderWithDetails); // 超时自动取消
+          } else {
+            refundlist.value.push(orderWithDetails); // 已开场但未超时，可退款
+          }
         }
       } else if (orderWithDetails.orderStatus === 1) {
-        if (!isAfter30Minutes(orderWithDetails.time)) {
-          payedlist.value.push(orderWithDetails);
-        } else {
+        // 已支付订单
+        if (isAfter30Minutes(orderWithDetails.time)) {
+          // 未开场，可退款
           cantuikuan.value.push(orderWithDetails);
+        } else {
+          // 已开场，不可退款
+          payedlist.value.push(orderWithDetails);
         }
       } else if (orderWithDetails.orderStatus === 2) {
+        // 已取消订单
         quxiao.value.push(orderWithDetails);
       } else {
+        // 已退款订单
         refundlist.value.push(orderWithDetails);
       }
     }
@@ -101,9 +121,6 @@ const showOrders = async () => {
     isRefreshing.value = false;
   }
 };
-
-// 初始化订单列表
-showOrders();
 
 // 支付按钮 - 跳转至订单详情页
 const payout = (row) => {
@@ -250,7 +267,7 @@ onUnmounted(() => {
     <div v-if="notpayedlist.length > 0" class="order-section">
       <h2 class="section-title">待支付订单</h2>
       <div class="order-list">
-        <div v-for="(order, index) in notpayedlist" :key="index" class="order-card">
+        <div v-for="order in notpayedlist" :key="order.orderNo" class="order-card">
           <div class="order-header">
             <span class="order-no">订单号: {{ order.orderNo }}</span>
             <el-tag :type="statusMap[0].type" size="small">
@@ -284,7 +301,7 @@ onUnmounted(() => {
     <div v-if="cantuikuan.length > 0" class="order-section">
       <h2 class="section-title">待使用订单（可退款）</h2>
       <div class="order-list">
-        <div v-for="(order, index) in cantuikuan" :key="index" class="order-card">
+        <div v-for="order in cantuikuan" :key="order.orderNo" class="order-card">
           <div class="order-header">
             <span class="order-no">订单号: {{ order.orderNo }}</span>
             <el-tag :type="statusMap[1].type" size="small">
@@ -318,7 +335,7 @@ onUnmounted(() => {
     <div v-if="payedlist.length > 0" class="order-section">
       <h2 class="section-title">已完成订单</h2>
       <div class="order-list">
-        <div v-for="(order, index) in payedlist" :key="index" class="order-card">
+        <div v-for="order in payedlist" :key="order.orderNo" class="order-card">
           <div class="order-header">
             <span class="order-no">订单号: {{ order.orderNo }}</span>
             <el-tag :type="statusMap[1].type" size="small">
@@ -347,7 +364,7 @@ onUnmounted(() => {
     <div v-if="quxiao.length > 0" class="order-section">
       <h2 class="section-title">已取消订单</h2>
       <div class="order-list">
-        <div v-for="(order, index) in quxiao" :key="index" class="order-card">
+        <div v-for="order in quxiao" :key="order.orderNo" class="order-card">
           <div class="order-header">
             <span class="order-no">订单号: {{ order.orderNo }}</span>
             <el-tag :type="statusMap[2].type" size="small">
@@ -380,7 +397,7 @@ onUnmounted(() => {
     <div v-if="refundlist.length > 0" class="order-section">
       <h2 class="section-title">已退款订单</h2>
       <div class="order-list">
-        <div v-for="(order, index) in refundlist" :key="index" class="order-card">
+        <div v-for="order in refundlist" :key="order.orderNo" class="order-card">
           <div class="order-header">
             <span class="order-no">订单号: {{ order.orderNo }}</span>
             <el-tag :type="statusMap[3].type" size="small">

@@ -45,5 +45,7 @@ export const getSessionsByid=(params)=>request.get('/api/sessions/getSessionsByi
 export const getMoviesid=(params)=>request.get('/api/movies/getMoviesid',{params})
 export const deleteSeats=(seatssession)=>request.put('/api/seats/deleteSeats',seatssession)
 export const refundOrder = (params) => request.post('/api/orders/refund', params);
+export const refundOrders = (params) => request.put(`/api/orders/refundOrders?id=${params.id}`);
+
 export const addorderoperation=(operation)=>request.post('/api/orderOperation/addorderoperation',operation)
 export const searchOrdersBysid=(params)=>request.get('/api/orders/searchOrdersBysid',{params})
