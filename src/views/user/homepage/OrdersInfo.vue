@@ -1,49 +1,55 @@
 <script setup>
-import { ref, onMounted, computed, onUnmounted } from 'vue'
+import { ref, onMounted, computed, onUnmounted, watch } from 'vue'
 import { ElMessage, ElTag, ElImage, ElButton, ElEmpty, ElMessageBox } from 'element-plus'
 import { useRoute, useRouter } from 'vue-router'
-import { getSessionById, cancelOrder, userInfoService } from '@/api/user'
-import {useUserInfoStore} from "@/stores/userInfo"
+import { getSessionById, cancelOrder } from '@/api/user'
+import { useUserInfoStore } from '@/stores/userInfo'
 
-// 1. 路由与状态管理
+// 路由与状态管理
 const route = useRoute()
 const router = useRouter()
 const isLoading = ref(true)
 const orderDetail = ref(null) // 订单详情数据
 const sessionInfo = ref({}) // 场次信息
-const confirmDialog = ref(false) // 取消订单确认对话框
-const username = useUserInfoStore().userInfo.username
+const username = useUserInfoStore().userInfo?.username
 const isPaying = ref(false)
-const pollTimer = ref(null)  // 轮询定时器
-const pollTimeout = 3 * 60 * 10000  // 轮询超时时间（3分钟，与支付宝默认超时一致）
-const pollInterval = 3000  // 轮询间隔（3秒一次）
+const pollTimer = ref(null)  // 支付状态轮询定时器
+const pollTimeout = 15 * 60 * 1000  // 15分钟支付轮询超时
+const pollInterval = 3000  // 3秒轮询间隔
 
-// 2. 初始化数据
+// 倒计时相关变量
+const countdown = ref({ hours: 0, minutes: 0, seconds: 0 })
+const countdownTimer = ref(null) // 倒计时定时器
+const isCounting = ref(false) // 是否正在倒计时
+
+// 初始化数据
 onMounted(() => {
   const orderNo = route.query.orderNo
   if (orderNo) {
-    fetchOrderDetail(orderNo) // 加载订单详情
+    fetchOrderDetail(orderNo).then(() => {
+      // 待支付订单启动24小时倒计时
+      if (orderDetail.value?.orderStatus === 0) {
+        startCountdown()
+      }
+    })
   } else {
     isLoading.value = false
     ElMessage.error('缺少订单号参数')
   }
 })
 
-// 3. 获取订单详情
+// 获取订单详情
 const fetchOrderDetail = async (orderNo) => {
   try {
     const response = await fetch(`/api/orders/detail`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ orderNo: orderNo })
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ orderNo })
     })
 
     const data = await response.json()
     if (data?.status && data.data) {
       orderDetail.value = data.data
-      // 获取场次信息
       if (orderDetail.value.sessionId) {
         fetchSessionInfo(orderDetail.value.sessionId)
       }
@@ -58,7 +64,7 @@ const fetchOrderDetail = async (orderNo) => {
   }
 }
 
-// 4. 获取场次信息
+// 获取场次信息
 const fetchSessionInfo = async (sessionId) => {
   try {
     const response = await getSessionById(sessionId)
@@ -70,7 +76,7 @@ const fetchSessionInfo = async (sessionId) => {
   }
 }
 
-// 5. 格式化日期时间
+// 格式化日期时间
 const formatDateTime = (datetime) => {
   if (!datetime) return '未知时间'
   const date = new Date(datetime)
@@ -83,30 +89,55 @@ const formatDateTime = (datetime) => {
   })
 }
 
-// 6. 订单状态映射
+// 订单状态映射
 const statusMap = {
   0: { text: '待支付', type: 'warning' },
   1: { text: '已支付', type: 'success' },
   2: { text: '已取消', type: 'info' }
 }
-const statusText = computed(() => {
-  return statusMap[orderDetail.value?.orderStatus]?.text || '未知状态'
-})
-const statusType = computed(() => {
-  return statusMap[orderDetail.value?.orderStatus]?.type || 'default'
-})
+const statusText = computed(() => statusMap[orderDetail.value?.orderStatus]?.text || '未知状态')
+const statusType = computed(() => statusMap[orderDetail.value?.orderStatus]?.type || 'default')
 
-// 7. 支付方式映射
+// 支付方式映射
 const paymentMethodText = computed(() => {
   const method = orderDetail.value?.paymentMethod || ''
-  const methodMap = {
-    'alipay': '支付宝',
-    '': '未选择'
-  }
+  const methodMap = { 'alipay': '支付宝', '': '未选择' }
   return methodMap[method]
 })
 
-//取消订单（带确认对话框）
+// 启动24小时倒计时
+const startCountdown = () => {
+  if (countdownTimer.value) clearInterval(countdownTimer.value)
+
+  // 计算截止时间（订单创建时间 + 24小时）
+  const createTime = new Date(orderDetail.value.createTime)
+  const deadline = new Date(createTime.getTime() + 24 * 60 * 60 * 1000)
+  isCounting.value = true
+
+  // 更新倒计时
+  const update = () => {
+    const now = new Date()
+    const diff = deadline - now
+
+    if (diff <= 0) {
+      clearInterval(countdownTimer.value)
+      isCounting.value = false
+      autoCancelOrder() // 超时自动取消
+      return
+    }
+
+    countdown.value = {
+      hours: Math.floor(diff / (1000 * 60 * 60)),
+      minutes: Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)),
+      seconds: Math.floor((diff % (1000 * 60)) / 1000)
+    }
+  }
+
+  update() // 立即执行一次
+  countdownTimer.value = setInterval(update, 1000)
+}
+
+// 取消订单
 const handleCancelOrder = () => {
   ElMessageBox.confirm('确定要取消该订单吗？取消后座位将被释放', '提示', {
     confirmButtonText: '确定',
@@ -114,16 +145,14 @@ const handleCancelOrder = () => {
     type: 'warning'
   }).then(async () => {
     try {
+      clearInterval(countdownTimer.value) // 停止倒计时
+      isCounting.value = false
+
       const response = await cancelOrder(orderDetail.value.orderNo)
       if (response.status) {
         ElMessage.success('订单已取消')
-        orderDetail.value.orderStatus = 2 // 本地更新状态为已取消
-
-        // 可选：刷新订单列表页或跳转到订单列表
-        router.push({path: '/user/orders'});  // 跳转到订单列表页
-        // setTimeout(() => {
-        //   fetchOrderDetail(orderDetail.value.orderNo) // 刷新当前订单详情
-        // }, 1000)
+        orderDetail.value.orderStatus = 2
+        router.push({ path: '/user/orders' })
       } else {
         ElMessage.error(response.message || '取消订单失败')
       }
@@ -131,74 +160,110 @@ const handleCancelOrder = () => {
       console.error('取消订单失败:', error)
       ElMessage.error('取消订单时发生错误')
     }
-  }).catch(() => {
-    // 用户取消操作
-  })
+  }).catch(() => {})
 }
-//支付
+
+// 支付功能（点击停止倒计时）
 const handlePayment = async () => {
-  if(orderDetail.value.orderStatus !== 0){
-    ElMessage.warning('只有待支付订单可以支付');
-    return;
+  if (orderDetail.value.orderStatus !== 0) {
+    ElMessage.warning('只有待支付订单可以支付')
+    return
   }
+
   try {
-    isPaying.value = true;
-    // 传递订单号、金额、商品名称到支付宝接口
-    const payUrl = `http://127.0.0.1:8080/alipay/pay?traceNo=${orderDetail.value.orderNo}&totalAmount=${orderDetail.value.totalAmount}&subject=电影票-${sessionInfo.value.title || '未知电影'}`;
-    window.open(payUrl, '_blank');
-    startPollingOrderStatus();
-    // 支付后刷新订单状态
-    setTimeout(() => {
-      fetchOrderDetail(orderDetail.value.orderNo);
-    }, 5000);
-    isPaying.value = false;
+    isPaying.value = true
+    clearInterval(countdownTimer.value) // 停止倒计时
+    isCounting.value = false
+
+    // 打开支付页面
+    const payUrl = `http://127.0.0.1:8080/alipay/pay?traceNo=${orderDetail.value.orderNo}&totalAmount=${orderDetail.value.totalAmount}&subject=电影票-${sessionInfo.value.title || '未知电影'}`
+    window.open(payUrl, '_blank')
+
+    startPollingOrderStatus()
   } catch (error) {
-    console.error('支付请求失败:', error);
-    ElMessage.error('支付请求失败，请重试');
-    isPaying.value = false;
+    console.error('支付请求失败:', error)
+    ElMessage.error('支付请求失败，请重试')
+    isPaying.value = false
+    // 支付失败重启倒计时
+    if (orderDetail.value?.orderStatus === 0) startCountdown()
   }
 }
 
-//启动轮询检测订单状态
+// 支付状态轮询
 const startPollingOrderStatus = () => {
-  // 清除可能存在的旧定时器
-  if (pollTimer.value) clearInterval(pollTimer.value);
+  if (pollTimer.value) clearInterval(pollTimer.value)
+  const startTime = Date.now()
+  const userId = useUserInfoStore().userInfo?.id
 
-  const startTime = Date.now();  // 记录轮询开始时间
-
-  // 定时查询订单状态（每3秒一次）
   pollTimer.value = setInterval(async () => {
-    // 检查是否超时（超过3分钟则停止轮询）
     if (Date.now() - startTime > pollTimeout) {
-      clearInterval(pollTimer.value);
-      ElMessage.warning('支付超时，请检查支付状态');
-      isPaying.value = false;
-      return;
+      clearInterval(pollTimer.value)
+      ElMessage.warning('支付超时，自动取消订单')
+      isPaying.value = false
+      await autoCancelOrder() // 15分钟未支付超时取消
+      return
     }
 
-    // 查询最新订单状态
-    await fetchOrderDetail(orderDetail.value.orderNo);
-
-    // 如果状态变为“已支付”，停止轮询并更新UI
+    await fetchOrderDetail(orderDetail.value.orderNo)
     if (orderDetail.value?.orderStatus === 1) {
-      clearInterval(pollTimer.value);
-      isPaying.value = false;
-      ElMessage.success('支付成功！订单状态已更新');
+      clearInterval(pollTimer.value)
+      isPaying.value = false
+      ElMessage.success('支付成功！')
+      // 更新用户活动记录
+      if (userId && orderDetail.value.totalAmount) {
+        try {
+          await fetch('/api/userActivity/update-purchase', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({
+              userId: userId.toString(),
+              amount: orderDetail.value.totalAmount.toString()
+            })
+          })
+        } catch (error) {
+          console.error('更新活动记录失败:', error)
+        }
+      }
     }
-  }, pollInterval);
+  }, pollInterval)
 }
-// 组件卸载时清除定时器（避免内存泄漏）
-onUnmounted(() => {
-  if (pollTimer.value) {
-    clearInterval(pollTimer.value);
-  }
-});
 
+// 自动取消订单（超时触发）
+const autoCancelOrder = async () => {
+  if (orderDetail.value?.orderStatus !== 0) return
+
+  try {
+    const response = await cancelOrder(orderDetail.value.orderNo)
+    if (response.status) {
+      ElMessage.success('订单已因超时自动取消')
+      orderDetail.value.orderStatus = 2
+      router.push({ path: '/user/orders' })
+    } else {
+      ElMessage.error('超时取消失败：' + response.message)
+    }
+  } catch (error) {
+    console.error('自动取消失败:', error)
+    ElMessage.error('超时取消时发生错误')
+  }
+}
+
+// 监听订单状态变化
+watch(() => orderDetail.value?.orderStatus, (newStatus) => {
+  if (newStatus !== 0) {
+    clearInterval(countdownTimer.value)
+    isCounting.value = false
+  }
+})
+
+// 组件卸载清理定时器
+onUnmounted(() => {
+  if (countdownTimer.value) clearInterval(countdownTimer.value)
+  if (pollTimer.value) clearInterval(pollTimer.value)
+})
 </script>
 
 <template>
   <div class="order-detail-page">
-    <!-- 页面标题 -->
     <div class="page-title">订单详情</div>
 
     <!-- 加载状态 -->
@@ -215,14 +280,12 @@ onUnmounted(() => {
 
     <!-- 订单详情卡片 -->
     <div v-else class="order-card">
-      <!-- 订单状态标签 -->
+      <!-- 订单状态 -->
       <div class="order-status">
-        <el-tag :type="statusType" size="large">
-          {{ statusText }}
-        </el-tag>
+        <el-tag :type="statusType" size="large">{{ statusText }}</el-tag>
       </div>
 
-      <!-- 订单基本信息 -->
+      <!-- 基本信息 -->
       <div class="order-base-info">
         <div class="order-no">
           <span class="label">订单编号：</span>
@@ -259,7 +322,7 @@ onUnmounted(() => {
         <div class="contact-info">
           <p>
             <span class="label">用户名：</span>
-            <span class="value">{{username || '未填写' }}</span>
+            <span class="value">{{ username || '未填写' }}</span>
           </p>
           <p>
             <span class="label">联系电话：</span>
@@ -268,7 +331,7 @@ onUnmounted(() => {
         </div>
       </div>
 
-      <!-- 订单金额信息 -->
+      <!-- 支付信息 -->
       <div class="info-section">
         <h3 class="section-title">支付信息</h3>
         <div class="payment-info">
@@ -293,6 +356,10 @@ onUnmounted(() => {
         >
           <i class="el-icon-credit-card" v-if="!isPaying"></i>
           立即支付
+          <!-- 倒计时显示 -->
+          <span v-if="isCounting" class="countdown-text">
+            ({{ countdown.hours.toString().padStart(2, '0') }}:{{ countdown.minutes.toString().padStart(2, '0') }}:{{ countdown.seconds.toString().padStart(2, '0') }})
+          </span>
         </el-button>
         <el-button
             v-if="orderDetail.orderStatus === 0"
@@ -301,12 +368,7 @@ onUnmounted(() => {
         >
           取消订单
         </el-button>
-        <el-button
-            type="info"
-            @click="router.back()"
-        >
-          返回
-        </el-button>
+        <el-button type="info" @click="router.back()">返回</el-button>
       </div>
     </div>
   </div>
@@ -318,6 +380,7 @@ onUnmounted(() => {
   margin: 20px auto;
   padding: 0 20px;
 }
+
 .page-title {
   font-size: 22px;
   font-weight: bold;
@@ -434,5 +497,20 @@ onUnmounted(() => {
   justify-content: flex-end;
   gap: 10px;
   margin-top: 30px;
+}
+
+/* 倒计时样式 */
+.countdown-text {
+  margin-left: 8px;
+  font-size: 14px;
+  color: #fff;
+  font-weight: normal;
+  /* 剩余1小时内闪烁提醒 */
+  animation: blink 1s infinite alternate linear;
+}
+
+@keyframes blink {
+  from { opacity: 1; }
+  to { opacity: 0.7; }
 }
 </style>

@@ -1,5 +1,5 @@
 <script setup>
-import {ref} from "vue";
+import { ref } from "vue";
 import {
   deleteSeats,
   fetchOrders,
@@ -11,29 +11,22 @@ import {
   searchOrders
 } from "@/api/user";
 import router from "@/router";
+import { ElMessage, ElMessageBox, ElTag, ElButton } from "element-plus";
+import { useUserInfoStore } from "@/stores/userInfo";
 import axios from 'axios';
-import {ElMessage} from "element-plus";
-import {useUserInfoStore} from "@/stores/userInfo";
+
 const userInfoStore = useUserInfoStore();
 const uid = userInfoStore.userInfo?.id;
-// 删除排期则显示相应需要退款的订单
-// 管理员需要根据排期号来选择
-// 删除排期则删除座位排布
-//最好一键完成   删除排期  先删订单，再删排期，最后删座位  is_deleted??????
-// 退款功能
 
+// 订单列表数据
+const notpayedlist = ref([]);
+const payedlist = ref([]);
+const refundlist = ref([]);
+const cantuikuan = ref([]);
+const quxiao = ref([]);
+const orders = ref([]);
 
-const notpayedlist=ref([])
-//未支付订单 0
-const payedlist=ref([])
-//已支付并使用订单（在电影开场半小时内不退） 1且过时间了
-const refundlist=ref([])
-//已退单订单 3
-const cantuikuan=ref([])
-//可以退单订单 1
-const quxiao=ref([])
-//已取消订单 2
-const orders=ref([])
+// 判断是否在开场前以上（可退款）
 const isAfter30Minutes = (inputTime) => {
   const targetTime = new Date(inputTime);
   const currentTime = new Date();
@@ -48,64 +41,60 @@ const isAfterOneDay = (inputTime) => {
   const thirtyMinutesInMs = 24*60*60*1000;
   return timeDiff > thirtyMinutesInMs;
 };
-const showOrders=()=>{
 
-  fetchOrders().then(res=>{
-    console.log(res.data)
-    console.log(uid)
-    orders.value = res.data.filter(order => order.userId===uid);
-    console.log(orders.value)
-  //   此处进行拼接字段
-   orders.value.forEach(order=>{
-     const xuqouorder=ref({
-       orderNo:"",
-       contactPhone:"",
-       paymentTransactionId:"",
-       totalAmount:"",
-       paymentTime:"",
-       orderStatus:"",
-       code:"",
-       title:"",
-       time:"",
-       movieId:"",
-       userId:"",
-     })
+// 加载订单列表
+const showOrders = async () => {
+  notpayedlist.value = [];
+  payedlist.value = [];
+  refundlist.value = [];
+  cantuikuan.value = [];
+  quxiao.value = [];
+  orders.value = [];
 
-     getSessionsByid({sessionId:order.sessionId}).then(res=>{
-       xuqouorder.value=order
-       xuqouorder.value.time=res.data.time
-       xuqouorder.value.movieId=res.data.movieId
-       console.log(res.data.movieId)
-       getMoviesid({id:res.data.movieId}).then(res=>{
-            xuqouorder.value.title=res.data.title
-         if(xuqouorder.value.orderStatus==0){
-           if(!isAfter30Minutes(xuqouorder.value.time)){
-             quxiao.value.push(xuqouorder.value)
-           }else{
-             notpayedlist.value.push(xuqouorder.value)
-           console.log(xuqouorder.value)}
-         }else if(!xuqouorder.value.orderStatus==1){
-                if(!isAfterOneDay(xuqouorder.value.createTime)){
-                  payedlist.value.push(xuqouorder.value)
-                }else{
-                  cantuikuan.value.push(xuqouorder.value)
-                }
+  try {
+    const res = await fetchOrders();
+    orders.value = res.data.filter(order => order.userId === uid);
 
-         }else if(xuqouorder.value.orderStatus==2){
-           quxiao.value.push(xuqouorder.value)
-         }else{
-           refundlist.value.push(xuqouorder.value)
-         }
+    for (const order of orders.value) {
+      const orderWithDetails = { ...order };
 
-       })
-     })
-   })
-  })
+      const sessionRes = await getSessionsByid({ sessionId: order.sessionId });
+      orderWithDetails.time = sessionRes.data.time;
+      orderWithDetails.movieId = sessionRes.data.movieId;
 
-}
-showOrders()
-const payout=(row)=>{
-  //接支付接口
+      const movieRes = await getMoviesid({ id: sessionRes.data.movieId });
+      orderWithDetails.title = movieRes.data.title;
+      console.log("看这儿",orderWithDetails)
+      // 订单分类
+      if (orderWithDetails.orderStatus === 0) {
+        if (isAfterOneDay(orderWithDetails.creatTime)) {
+          quxiao.value.push(orderWithDetails);
+        } else {
+          notpayedlist.value.push(orderWithDetails);
+        }
+      } else if (orderWithDetails.orderStatus === 1) {
+        if (!isAfter30Minutes(orderWithDetails.time)) {
+          payedlist.value.push(orderWithDetails);
+        } else {
+          cantuikuan.value.push(orderWithDetails);
+        }
+      } else if (orderWithDetails.orderStatus === 2) {
+        quxiao.value.push(orderWithDetails);
+      } else {
+        refundlist.value.push(orderWithDetails);
+      }
+    }
+  } catch (error) {
+    console.error("刷新订单列表失败:", error);
+    ElMessage.error("刷新订单失败，请重试");
+  }
+};
+
+// 初始化订单列表
+showOrders();
+
+// 支付按钮 - 跳转至订单详情页
+const payout = (row) => {
   router.push({
     path: '/user/OrdersInfo',
     query: {
@@ -113,158 +102,375 @@ const payout=(row)=>{
     }
   });
 }
-const outOrder=(row)=>{
-  //退单接口加seats表改变
-  console.log("看这儿",row.id)
-  getSeats(row.sessionId).then(res=>{
-    console.log("取到的座位数据",res.data)
-    const seats=row.code
-    const selectedCodes = row.code.split(','); // 分割成数组，如 ["a1", "b2", "c3"]
-// 查找对应的 seatId
-    for (const code of selectedCodes) {
-      const seatssession=ref({
-        sessionId:"",
-        code:""
-      })
-      seatssession.value.sessionId=row.sessionId
-      seatssession.value.code=code
-      const shuju={...seatssession.value}
-      console.log(shuju)
-      deleteSeats(shuju).then(res=>{
-        //订单退单的函数及接口  将状态改为3
-        refundOrder({id:row.id}).then(res=>{
-          ElMessage({
-            message:'退单成功',
-            type:'success'
-          })
-          showOrders()
-        })
 
-      })
+// 退单功能
+const outOrder = async (row) => {
+  const userInfoStore = useUserInfoStore();
+  const userId = userInfoStore.userInfo?.id;
+  if (!row) {
+    ElMessage.error('订单数据不存在');
+    return;
+  }
+  if (!row.orderNo) {
+    ElMessage.error('订单编号缺失');
+    return;
+  }
+  if (!row.totalAmount) {
+    ElMessage.error('退款金额缺失');
+    return;
+  }
+
+  try {
+    await ElMessageBox.confirm(
+        `确定要退掉《${row.title}》的订单吗？`,
+        '退单确认',
+        {
+          confirmButtonText: '确认退单',
+          cancelButtonText: '取消',
+          type: 'warning'
+        }
+    );
+
+    const refundParams = {
+      orderNo: row.orderNo,
+      refundAmount: row.totalAmount.toString(),
+      refundReason: '用户主动退单'
+    };
+    const refundRes = await refundOrder(refundParams);
+
+    if (refundRes.status) {
+      ElMessage.success('退款成功，资金将在1-3个工作日内退回原支付账户');
+      await showOrders();
+      if (userId && row.totalAmount) {
+        try {
+          await fetch('/api/userActivity/update-refund', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({
+              userId: userId.toString(),
+              amount: row.totalAmount.toString()
+            })
+          });
+          console.log('用户活动记录更新成功');
+        } catch (error) {
+          console.error('更新用户活动失败:', error);
+        }
+      }
+    } else {
+      ElMessage.error(`退款失败：${refundRes.message || '未知错误'}`);
     }
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('退单失败:', error);
+      ElMessage.error(`退单失败：${error.message || '系统错误'}`);
+    }
+  }
+};
 
+// 重新购买
+const repay = (row) => {
+  router.push('/film/ticket?fid=' + row.movieId);
+};
+
+// 订单状态映射
+const statusMap = {
+  0: { text: '待支付', type: 'warning' },
+  1: { text: '已支付', type: 'success' },
+  2: { text: '已取消', type: 'info' },
+  3: { text: '已退款', type: 'danger' }
+};
+
+// 格式化日期时间
+const formatDateTime = (datetime) => {
+  if (!datetime) return '未知时间';
+  const date = new Date(datetime);
+  return date.toLocaleString('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
   })
-}
-const repay=(row)=>{
-  //重新购买接口  就跳到相应电影详情页即可
-   router.push('/film/ticket?fid=' + row.movieId)
-  console.log("电影id",row.movieId)
 }
 </script>
 
 <template>
-  <el-card>
-    <h1>订单</h1>
+  <el-card class="orders-container">
+    <h1 class="page-title">我的订单</h1>
 
+    <!-- 待支付订单 -->
+    <div v-if="notpayedlist.length > 0" class="order-section">
+      <h2 class="section-title">待支付订单</h2>
+      <div class="order-list">
+        <div v-for="(order, index) in notpayedlist" :key="index" class="order-card">
+          <div class="order-header">
+            <span class="order-no">订单号: {{ order.orderNo }}</span>
+            <el-tag :type="statusMap[0].type" size="small">
+              {{ statusMap[0].text }}
+            </el-tag>
+          </div>
+
+          <div class="order-body">
+            <div class="movie-info">
+              <h3>{{ order.title }}</h3>
+              <p>时间: {{ formatDateTime(order.time) }}</p>
+              <p>座位: {{ order.code.split(',').join('、') }}</p>
+              <p>支付方式: {{ order.paymentTransactionId || '未选择' }}</p>
+            </div>
+
+            <div class="order-amount">
+              <span class="price">¥{{ order.totalAmount.toFixed(2) }}</span>
+            </div>
+          </div>
+
+          <div class="order-actions">
+            <el-button type="primary" size="small" @click="payout(order)">
+              立即支付
+            </el-button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 可退款订单 -->
+    <div v-if="cantuikuan.length > 0" class="order-section">
+      <h2 class="section-title">待使用订单（可退款）</h2>
+      <div class="order-list">
+        <div v-for="(order, index) in cantuikuan" :key="index" class="order-card">
+          <div class="order-header">
+            <span class="order-no">订单号: {{ order.orderNo }}</span>
+            <el-tag :type="statusMap[1].type" size="small">
+              {{ statusMap[1].text }}
+            </el-tag>
+          </div>
+
+          <div class="order-body">
+            <div class="movie-info">
+              <h3>{{ order.title }}</h3>
+              <p>时间: {{ formatDateTime(order.time) }}</p>
+              <p>座位: {{ order.code.split(',').join('、') }}</p>
+              <p>支付方式: {{ order.paymentTransactionId || '未知' }}</p>
+            </div>
+
+            <div class="order-amount">
+              <span class="price">¥{{ order.totalAmount.toFixed(2) }}</span>
+            </div>
+          </div>
+
+          <div class="order-actions">
+            <el-button type="danger" size="small" @click="outOrder(order)">
+              退单
+            </el-button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 已完成订单 -->
+    <div v-if="payedlist.length > 0" class="order-section">
+      <h2 class="section-title">已完成订单</h2>
+      <div class="order-list">
+        <div v-for="(order, index) in payedlist" :key="index" class="order-card">
+          <div class="order-header">
+            <span class="order-no">订单号: {{ order.orderNo }}</span>
+            <el-tag :type="statusMap[1].type" size="small">
+              {{ statusMap[1].text }}
+            </el-tag>
+          </div>
+
+          <div class="order-body">
+            <div class="movie-info">
+              <h3>{{ order.title }}</h3>
+              <p>时间: {{ formatDateTime(order.time) }}</p>
+              <p>座位: {{ order.code.split(',').join('、') }}</p>
+              <p>支付方式: {{ order.paymentTransactionId || '未知' }}</p>
+              <p>支付时间: {{ formatDateTime(order.paymentTime) || '未知' }}</p>
+            </div>
+
+            <div class="order-amount">
+              <span class="price">¥{{ order.totalAmount.toFixed(2) }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 已取消订单 -->
+    <div v-if="quxiao.length > 0" class="order-section">
+      <h2 class="section-title">已取消订单</h2>
+      <div class="order-list">
+        <div v-for="(order, index) in quxiao" :key="index" class="order-card">
+          <div class="order-header">
+            <span class="order-no">订单号: {{ order.orderNo }}</span>
+            <el-tag :type="statusMap[2].type" size="small">
+              {{ statusMap[2].text }}
+            </el-tag>
+          </div>
+
+          <div class="order-body">
+            <div class="movie-info">
+              <h3>{{ order.title }}</h3>
+              <p>时间: {{ formatDateTime(order.time) }}</p>
+              <p>座位: {{ order.code.split(',').join('、') }}</p>
+            </div>
+
+            <div class="order-amount">
+              <span class="price">¥{{ order.totalAmount.toFixed(2) }}</span>
+            </div>
+          </div>
+
+          <div class="order-actions">
+            <el-button type="default" size="small" @click="repay(order)">
+              重新购买
+            </el-button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 已退款订单 -->
+    <div v-if="refundlist.length > 0" class="order-section">
+      <h2 class="section-title">已退款订单</h2>
+      <div class="order-list">
+        <div v-for="(order, index) in refundlist" :key="index" class="order-card">
+          <div class="order-header">
+            <span class="order-no">订单号: {{ order.orderNo }}</span>
+            <el-tag :type="statusMap[3].type" size="small">
+              {{ statusMap[3].text }}
+            </el-tag>
+          </div>
+
+          <div class="order-body">
+            <div class="movie-info">
+              <h3>{{ order.title }}</h3>
+              <p>时间: {{ formatDateTime(order.time) }}</p>
+              <p>座位: {{ order.code.split(',').join('、') }}</p>
+            </div>
+
+            <div class="order-amount">
+              <span class="price">¥{{ order.totalAmount.toFixed(2) }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 空状态 -->
+    <div v-if="orders.length === 0" class="empty-state">
+      <el-empty description="暂无订单数据"></el-empty>
+    </div>
   </el-card>
-<div class="box">
-  <div>
-    <p>用户待支付订单</p>
-    <el-table :data="notpayedlist" border style="width: 100%">
-      <!-- 数据列 -->
-      <el-table-column prop="orderNo" label="订单编号" width="180" />
-      <el-table-column prop="code" label="座位号" width="180" />
-      <el-table-column prop="time" label="开场时间" width="180" />
-      <el-table-column prop="title" label="电影名称" width="180"/>
-      <el-table-column prop="paymentTransactionId" label="支付方式" width="180"/>
-      <el-table-column prop="totalAmount" label="总金额" width="180"/>
-      <el-table-column prop="paymentTime" label="支付时间" width="180"/>
-      <!-- 操作列（正确插槽用法） -->
-      <el-table-column label="操作" width="200">
-        <template #default="{ row }">
-          <el-button @click="payout(row)">支付</el-button>
-        </template>
-      </el-table-column>
-    </el-table>
-  </div>
-
-  <div>
-    <p>用户待使用订单</p>
-    <el-table :data="cantuikuan" border style="width: 100%">
-      <!-- 数据列 -->
-      <el-table-column prop="orderNo" label="订单编号" width="180" />
-      <el-table-column prop="code" label="座位号" width="180" />
-      <el-table-column prop="time" label="开场时间" width="180" />
-      <el-table-column prop="title" label="电影名称" width="180"/>
-      <el-table-column prop="paymentTransactionId" label="支付方式" width="180"/>
-      <el-table-column prop="totalAmount" label="总金额" width="180"/>
-      <el-table-column prop="paymentTime" label="支付时间" width="180"/>
-      <!-- 操作列（正确插槽用法） -->
-      <el-table-column label="操作" width="200">
-        <template #default="{ row }">
-          <el-button @click="outOrder(row)">退单</el-button>
-        </template>
-      </el-table-column>
-    </el-table>
-  </div>
-
-
-
-  <div>
-    <p>用户已取消订单</p>
-    <el-table :data="quxiao" border style="width: 100%"  >
-      <!-- 数据列 -->
-      <el-table-column prop="orderNo"  label="订单编号" width="180" />
-      <el-table-column prop="code" label="座位号" width="180" />
-      <el-table-column prop="time" label="开场时间" width="180" />
-      <el-table-column prop="title" label="电影名称" width="180"/>
-      <el-table-column prop="paymentTransactionId" label="支付方式" width="180"/>
-      <el-table-column prop="totalAmount" label="总金额" width="180"/>
-      <el-table-column prop="paymentTime" label="支付时间" width="180"/>
-      <!-- 操作列（正确插槽用法） -->
-      <el-table-column label="操作" width="200">
-        <template #default="{ row }">
-          <el-button @click="repay(row)">重新购买</el-button>
-        </template>
-      </el-table-column>
-    </el-table>
-  </div>
-
-
-  <div>
-    <p>用户已完成订单</p>
-    <el-table :data="payedlist" border style="width: 100%">
-      <!-- 数据列 -->
-      <el-table-column prop="orderNo" label="订单编号" width="180" />
-      <el-table-column prop="code" label="座位号" width="180" />
-      <el-table-column prop="time" label="开场时间" width="180" />
-      <el-table-column prop="title" label="电影名称" width="180"/>
-      <el-table-column prop="paymentTransactionId" label="支付方式" width="180"/>
-      <el-table-column prop="totalAmount" label="总金额" width="180"/>
-      <el-table-column prop="paymentTime" label="支付时间" width="180"/>
-      <!-- 操作列（正确插槽用法） -->
-      <el-table-column label="操作" width="200">
-        <template #default="{ row }">
-        </template>
-      </el-table-column>
-    </el-table>
-  </div>
-
-
-  <div>
-    <p>用户退单订单</p>
-    <el-table :data="refundlist" border style="width: 100%">
-      <!-- 数据列 -->
-      <el-table-column prop="orderNo" label="订单编号" width="180" />
-      <el-table-column prop="code" label="座位号" width="180" />
-      <el-table-column prop="time" label="开场时间" width="180" />
-      <el-table-column prop="title" label="电影名称" width="180"/>
-      <el-table-column prop="paymentTransactionId" label="支付方式" width="180"/>
-      <el-table-column prop="totalAmount" label="总金额" width="180"/>
-      <el-table-column prop="paymentTime" label="支付时间" width="180"/>
-      <!-- 操作列（正确插槽用法） -->
-      <el-table-column label="操作" width="200">
-        <template #default="{ row }">
-        </template>
-      </el-table-column>
-    </el-table>
-  </div>
-</div>
 </template>
 
 <style scoped lang="scss">
-:deep(.el-table th.el-table__cell) {
-  text-align: center;
+.orders-container {
+  max-width: 1000px;
+  margin: 20px auto;
+  padding: 20px;
+  border-radius: 8px;
 }
 
+.page-title {
+  font-size: 24px;
+  font-weight: bold;
+  margin-bottom: 25px;
+  color: #333;
+  text-align: center;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.section-title {
+  font-size: 18px;
+  color: #333;
+  margin: 30px 0 15px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #eee;
+}
+
+.order-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 15px;
+}
+
+.order-card {
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  padding: 15px;
+  transition: all 0.3s ease;
+
+  &:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px);
+  }
+}
+
+.order-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+
+  .order-no {
+    font-size: 14px;
+    color: #666;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+.order-body {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 15px;
+
+  .movie-info {
+    flex: 1;
+
+    h3 {
+      font-size: 16px;
+      margin: 0 0 8px 0;
+      color: #333;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    p {
+      font-size: 13px;
+      color: #666;
+      margin: 4px 0;
+      line-height: 1.5;
+    }
+  }
+
+  .order-amount {
+    width: 80px;
+    text-align: right;
+
+    .price {
+      font-size: 16px;
+      font-weight: bold;
+      color: #f56c6c;
+    }
+  }
+}
+
+.order-actions {
+  display: flex;
+  justify-content: flex-end;
+
+  .el-button {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+}
+
+.empty-state {
+  margin: 60px 0;
+  text-align: center;
+}
 </style>
