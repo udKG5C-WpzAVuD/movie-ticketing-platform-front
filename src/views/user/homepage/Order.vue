@@ -314,7 +314,7 @@ onUnmounted(() => {
               <h3>{{ order.title }}</h3>
               <p>时间: {{ formatDateTime(order.time) }}</p>
               <p>座位: {{ order.code.split(',').join('、') }}</p>
-              <p>支付方式: {{ order.paymentTransactionId || '未知' }}</p>
+              <p>支付方式: {{ '支付宝' || '未知' }}</p>
             </div>
 
             <div class="order-amount">
@@ -348,7 +348,7 @@ onUnmounted(() => {
               <h3>{{ order.title }}</h3>
               <p>时间: {{ formatDateTime(order.time) }}</p>
               <p>座位: {{ order.code.split(',').join('、') }}</p>
-              <p>支付方式: {{ order.paymentTransactionId || '未知' }}</p>
+              <p>支付方式: {{ '支付宝' || '未知' }}</p>
               <p>支付时间: {{ formatDateTime(order.paymentTime) || '未知' }}</p>
             </div>
 
