@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, onUnmounted } from "vue";
+import { ref } from "vue";
 import {
   deleteSeats,
   fetchOrders,
@@ -28,12 +28,19 @@ const cantuikuan = ref([]);
 const quxiao = ref([]);
 const orders = ref([]);
 
-// 判断是否在开场前30分钟以上（可退款）
+// 判断是否在开场前以上（可退款）
 const isAfter30Minutes = (inputTime) => {
   const targetTime = new Date(inputTime);
   const currentTime = new Date();
   const timeDiff = targetTime.getTime() - currentTime.getTime();
-  const thirtyMinutesInMs = 30 * 60 * 1000;
+  const thirtyMinutesInMs = 0;
+  return timeDiff > thirtyMinutesInMs;
+};
+const isAfterOneDay = (inputTime) => {
+  const targetTime = new Date(inputTime);
+  const currentTime = new Date();
+  const timeDiff =  currentTime.getTime()-targetTime.getTime() ;//当前时间-创建时间
+  const thirtyMinutesInMs = 24*60*60*1000;
   return timeDiff > thirtyMinutesInMs;
 };
 
@@ -72,12 +79,16 @@ const showOrders = async () => {
 
       const movieRes = await getMoviesid({ id: sessionRes.data.movieId });
       orderWithDetails.title = movieRes.data.title;
+      console.log("看这儿",orderWithDetails)
+      // 订单分类
 
       // 订单分类（添加日志便于调试）
       if (orderWithDetails.orderStatus === 0) {
         if (!isAfter30Minutes(orderWithDetails.time)) {
           console.log('添加到refundlist:', orderWithDetails.orderNo);
           refundlist.value.push(orderWithDetails);
+        if (isAfterOneDay(orderWithDetails.creatTime)) {
+          quxiao.value.push(orderWithDetails);
         } else {
           console.log('添加到notpayedlist:', orderWithDetails.orderNo);
           notpayedlist.value.push(orderWithDetails);
@@ -240,6 +251,8 @@ onMounted(() => {
 onUnmounted(() => {
   if (refreshTimer) clearInterval(refreshTimer);
 });
+  })
+}
 </script>
 
 <template>
